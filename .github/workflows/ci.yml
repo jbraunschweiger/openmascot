@@ -1,0 +1,67 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    name: Check, test, build
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Install
+        run: pnpm install --frozen-lockfile
+
+      - name: Embedded art is up to date
+        run: pnpm embed --check
+
+      - name: Typecheck
+        run: pnpm typecheck
+
+      - name: Unit tests
+        run: pnpm test
+
+      - name: Lint Echo's clips
+        run: pnpm openmascot lint echo
+
+      - name: Validate Echo's rig
+        run: pnpm openmascot validate echo
+
+      - name: Build playground
+        run: pnpm --filter @openmascot/playground build
+
+      - name: Render frame sheets
+        run: |
+          pnpm framesheet echo --sweep root.yaw --range 0,330
+          pnpm framesheet echo --expressions
+          pnpm framesheet echo idle --frames 8
+          npx tsx packages/cli/src/fx-sheet.ts --out out/sheets/effects.png
+
+      - name: Upload frame sheets
+        uses: actions/upload-artifact@v4
+        with:
+          name: frame-sheets
+          path: out/sheets/*.png
+          if-no-files-found: error
+          retention-days: 14

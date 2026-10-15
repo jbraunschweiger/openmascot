@@ -1,0 +1,31 @@
+/* Shared playground base styles & tokens (keep small; pages own their own CSS). */
+:root {
+  --om-purple: #6b4fd8;
+  --om-purple-dark: #3d2d72;
+  --om-ink: #2b2340;
+  --om-muted: #6b6280;
+  --om-bg: #f7f5fc;
+  --om-card: #ffffff;
+  --om-line: #e8e3f3;
+  --om-radius: 18px;
+  font-family: 'Nunito', 'Inter', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  color: var(--om-ink);
+  background: var(--om-bg);
+}
+* { box-sizing: border-box; }
+body { margin: 0; min-height: 100vh; background: var(--om-bg); }
+.om-nav {
+  position: sticky; top: 0; z-index: 10;
+  display: flex; gap: 6px; align-items: center;
+  padding: 10px 20px; background: rgba(255,255,255,.85); backdrop-filter: blur(8px);
+  border-bottom: 1px solid var(--om-line);
+}
+.om-nav a { color: var(--om-muted); text-decoration: none; font-weight: 700; padding: 6px 12px; border-radius: 999px; font-size: 14px; }
+.om-nav a.active, .om-nav a:hover { color: var(--om-purple); background: #efeafd; }
+.om-nav .om-brand { color: var(--om-ink); font-weight: 900; font-size: 16px; margin-right: 12px; }
+.om-nav .om-gh { margin-left: auto; }
+@media (max-width: 700px) {
+  .om-nav { overflow-x: auto; padding: 8px 12px; scrollbar-width: none; }
+  .om-nav a { white-space: nowrap; }
+  .om-nav .om-brand { margin-right: 4px; }
+}

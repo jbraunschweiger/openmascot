@@ -1,0 +1,14 @@
+{
+  "name": "@openmascot/cli",
+  "version": "0.1.0",
+  "description": "OpenMascot command line: validate rigs, render frames, and build frame sheets for reviewing animations.",
+  "license": "MIT",
+  "type": "module",
+  "bin": { "openmascot": "./src/bin.ts" },
+  "scripts": { "build": "tsup src/bin.ts --format esm --clean" },
+  "dependencies": {
+    "@openmascot/core": "workspace:*",
+    "@openmascot/characters": "workspace:*",
+    "@resvg/resvg-js": "^2.6.2"
+  }
+}

@@ -1,0 +1,15 @@
+{
+  "extends": "./tsconfig.base.json",
+  "compilerOptions": {
+    "noEmit": true,
+    "types": ["node"],
+    "paths": {
+      "@openmascot/core": ["./packages/core/src/index.ts"],
+      "@openmascot/web": ["./packages/web/src/index.ts"],
+      "@openmascot/react": ["./packages/react/src/index.tsx"],
+      "@openmascot/characters": ["./packages/characters/src/index.ts"],
+      "@openmascot/characters/*": ["./packages/characters/src/*"]
+    }
+  },
+  "include": ["packages/*/src", "packages/*/test", "apps/*/src", "vitest.config.ts"]
+}
