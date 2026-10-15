@@ -1,0 +1,13 @@
+{
+  "$schema": "https://unpkg.com/@changesets/config@4.0.1/schema.json",
+  "baseBranch": "main",
+  "access": "public",
+  "format": false,
+  "changelog": ["@changesets/changelog-github", { "repo": "jbraunschweiger/openmascot" }],
+  "commit": false,
+  "ignore": [],
+  "fixed": [["@openmascot/core", "@openmascot/web", "@openmascot/react", "@openmascot/characters", "@openmascot/cli"]],
+  "linked": [],
+  "updateInternalDependencies": "patch",
+  "privatePackages": { "version": false, "tag": false }
+}

@@ -11,7 +11,7 @@
  *  - A weak perspective term scales parts by how far their depth has moved
  *    from the rest pose (so the rest pose is exactly the source drawing).
  */
-import { boneMatrix, IDENTITY, mul } from './mat';
+import { apply, boneMatrix, IDENTITY, invert, mul } from './mat';
 import { clamp, lerp, smoothstep } from './ease';
 import type { BoneChannels, BoneNode, Frame, Mat, Rig, RigNode, SolvedBone } from './types';
 import { REST } from './types';
@@ -43,8 +43,17 @@ interface Ctx {
   /** Product of foreshortening already applied by ancestors (x, y). */
   fx: number;
   fy: number;
+  /** Foreshortening in the parent's own local matrix (divided out of child offsets). */
+  pfx: number;
+  pfy: number;
+  /** Direction the parent's surface faces (yaw/pitch + its normal): children's z points along it, for sorting. */
+  syaw: number;
+  spitch: number;
   opacity: number;
 }
+
+/** Avoid dividing by ~0 when a parent is edge-on (it is faded out then anyway). */
+const safe = (v: number) => (Math.abs(v) < 1e-3 ? (v < 0 ? -1e-3 : 1e-3) : v);
 
 export function solve(rig: Rig, input: SolveInput, opts: SolveOptions = {}, prev?: Frame): Frame {
   const focal = opts.focal ?? 900;
@@ -52,6 +61,9 @@ export function solve(rig: Rig, input: SolveInput, opts: SolveOptions = {}, prev
   const bones: SolvedBone[] = prev?.bones ?? new Array(rig.bones.length);
   const order = new Map<number, number[]>();
   const extra = input.extraRot ?? {};
+  // Pinned bones follow other bones' solved transforms, so they (and their
+  // subtrees) are finished after the main walk, in document order.
+  const deferred: { b: BoneNode; ctx: Ctx; ch: BoneChannels; t: [number, number]; lin: [number, number, number, number]; vis: number; depth: number; restDepth: number; fx: number; fy: number }[] = [];
 
   const rotate3 = (dx: number, dy: number, dz: number, yaw: number, pitch: number): [number, number, number] => {
     // yaw (about the vertical axis): +yaw turns toward screen-right
@@ -76,7 +88,7 @@ export function solve(rig: Rig, input: SolveInput, opts: SolveOptions = {}, prev
       } else if (n.kind === 'bone') {
         depths[i] = solveBone(n, ctx);
       } else {
-        const zr = rotate3(0, 0, n.z, ctx.yaw, ctx.pitch)[2];
+        const zr = rotate3(0, 0, n.z, ctx.syaw, ctx.spitch)[2];
         depths[i] = zr;
         if (n.kind === 'layer') {
           visit(n.index, n.children, ctx);
@@ -129,17 +141,26 @@ export function solve(rig: Rig, input: SolveInput, opts: SolveOptions = {}, prev
       const cx0 = Math.cos((ny + back) * DEG);
       const cy0 = Math.cos(np * DEG);
       if (b.surface === 'flat') {
-        fx = Math.abs(cx0) > 1e-3 ? cxa / Math.abs(cx0) : cxa;
-        fy = Math.abs(cy0) > 1e-3 ? cya / Math.abs(cy0) : cya;
-        // Edge-on flat art degenerates into a distracting sliver: fade it out.
-        vis = smoothstep(0.03, 0.2, Math.abs(cxa * cya));
+        let ca = cxa;
+        let cb = cya;
+        if (b.flatMin !== undefined) {
+          // Keep a minimum width edge-on (and stay opaque) instead of fading.
+          ca = (ca < 0 ? -1 : 1) * Math.max(Math.abs(ca), b.flatMin);
+          cb = (cb < 0 ? -1 : 1) * Math.max(Math.abs(cb), b.flatMin);
+        } else {
+          // Edge-on flat art degenerates into a distracting sliver: fade it out.
+          vis = smoothstep(0.03, 0.2, Math.abs(cxa * cya));
+        }
+        fx = Math.abs(cx0) > 1e-3 ? ca / Math.abs(cx0) : ca;
+        fy = Math.abs(cy0) > 1e-3 ? cb / Math.abs(cy0) : cb;
       } else if (b.surface === 'feature') {
         // Protruding feature (snout, beak): foreshortens but never culls; the
         // parent's art occludes it naturally once it rotates behind.
         const rxr = Math.abs(cx0) > 1e-3 ? Math.abs(cxa) / Math.abs(cx0) : Math.abs(cxa);
         const ryr = Math.abs(cy0) > 1e-3 ? Math.abs(cya) / Math.abs(cy0) : Math.abs(cya);
-        fx = lerp(1, clamp(Math.max(rxr, 0.4), 0, 1.1), faceK);
-        fy = lerp(1, clamp(Math.max(ryr, 0.4), 0, 1.1), faceK);
+        const fmin = b.featureMin ?? 0.4;
+        fx = lerp(1, clamp(Math.max(rxr, fmin), 0, 1.1), faceK);
+        fy = lerp(1, clamp(Math.max(ryr, fmin), 0, 1.1), faceK);
       } else {
         const facing = cxa * cya;
         vis = smoothstep(0.02, 0.32, facing);
@@ -167,13 +188,40 @@ export function solve(rig: Rig, input: SolveInput, opts: SolveOptions = {}, prev
       k = ((focal - d0) / (focal - d1)) * ((focal - r1) / (focal - r0));
     }
 
+    // The parallax offset is already projected; express it in the parent's
+    // un-foreshortened space so a flat/face parent doesn't foreshorten it twice.
+    const tx = ch.x + (rx / ctx.pfx - dx);
+    const ty = ch.y + (ry / ctx.pfy - dy);
     const rot = ch.rot + (extra[b.name] ?? 0);
-    const local = boneMatrix(ch.x + (rx - dx), ch.y + (ry - dy), b.pivot[0], b.pivot[1], rot, ch.sx * fx * k, ch.sy * fy * k);
+
+    // Sort key among siblings: `data-om-sort-z` replaces `z` for sorting only.
+    // Inside a surface with a normal (an eye facing sideways), children's z
+    // points along that normal, so sort them by the surface's facing.
+    const sz = b.sortZ ?? b.z;
+    let sortDepth = rz + ch.dz;
+    if (sz !== b.z || ctx.syaw !== ctx.yaw || ctx.spitch !== ctx.pitch) {
+      sortDepth = (ctx.syaw || ctx.spitch ? rotate3(dx, dy, sz, ctx.syaw, ctx.spitch)[2] : sz) + ch.dz;
+    }
+    // Face features sit *on* their parent's surface: keep them in front of the
+    // parent's own art (culling, not sorting, hides them when turned away).
+    if (b.surface === 'face' && b.z > 0) sortDepth = Math.max(sortDepth, 1e-3);
+
+    if (b.pin?.length) {
+      const r = (rot * Math.PI) / 180;
+      const c = Math.cos(r);
+      const s1 = Math.sin(r);
+      const ax = ch.sx * fx * k;
+      const ay = ch.sy * fy * k;
+      deferred.push({ b, ctx, ch, t: [tx, ty], lin: [c * ax, s1 * ax, -s1 * ay, c * ay], vis, depth, restDepth, fx, fy });
+      return sortDepth;
+    }
+
+    const local = boneMatrix(tx, ty, b.pivot[0], b.pivot[1], rot, ch.sx * fx * k, ch.sy * fy * k);
     const world = mul(ctx.world, local);
     const opacity = ch.opacity * vis;
     const solved: SolvedBone = { local, world, opacity, depth, yaw, pitch };
     if (b.spring) {
-      solved.rigid = rot === ch.rot ? world : mul(ctx.world, boneMatrix(ch.x + (rx - dx), ch.y + (ry - dy), b.pivot[0], b.pivot[1], ch.rot, ch.sx * fx * k, ch.sy * fy * k));
+      solved.rigid = rot === ch.rot ? world : mul(ctx.world, boneMatrix(tx, ty, b.pivot[0], b.pivot[1], ch.rot, ch.sx * fx * k, ch.sy * fy * k));
     }
     bones[b.bi] = solved;
 
@@ -186,12 +234,109 @@ export function solve(rig: Rig, input: SolveInput, opts: SolveOptions = {}, prev
       restDepth,
       fx: b.surface === 'volume' ? ctx.fx : ctx.fx * fx,
       fy: b.surface === 'volume' ? ctx.fy : ctx.fy * fy,
+      pfx: safe(fx),
+      pfy: safe(fy),
+      syaw: b.surface === 'volume' ? yaw : yaw + b.normal[0],
+      spitch: b.surface === 'volume' ? pitch : pitch + b.normal[1],
       opacity: ctx.opacity * opacity,
     });
-    // Face features sit *on* their parent's surface: keep them in front of the
-    // parent's own art (culling, not sorting, hides them when turned away).
-    if (b.surface === 'face' && b.z > 0) return Math.max(rz + ch.dz, 1e-3);
-    return rz + ch.dz;
+    return sortDepth;
+  };
+
+  /**
+   * Finish a pinned bone: keep its pivot where the normal solve puts it, then
+   * replace its linear part so the pinned rest points land where their target
+   * bones carry them (1 pin: rotate + stretch toward it; 2 pins: exact affine).
+   */
+  const solvePinned = (d: (typeof deferred)[number]) => {
+    const { b, ctx, ch } = d;
+    const [px, py] = b.pivot;
+    // pivot position in the parent's space
+    const p0: [number, number] = [px + d.t[0], py + d.t[1]];
+    let [a, bb, c, dd] = d.lin;
+    const inv = invert(ctx.world);
+    const goal = (i: number): [number, number] | undefined => {
+      const pin = b.pin![i];
+      const tb = rig.bonesByName[pin.bone]?.[0];
+      const s = tb && bones[tb.bi];
+      if (!s) return undefined;
+      const w = apply(s.world, pin.at[0], pin.at[1]);
+      const l = apply(inv, w[0], w[1]);
+      return [l[0] - p0[0], l[1] - p0[1]];
+    };
+    let t0 = p0[0] - (a * px + c * py);
+    let t1 = p0[1] - (bb * px + dd * py);
+    const det0 = ctx.world[0] * ctx.world[3] - ctx.world[1] * ctx.world[2];
+    const n = b.pin!.length;
+    const goals = Math.abs(det0) > 1e-9 ? b.pin!.map((_, i) => goal(i)) : [];
+    if (n === 3 && goals[0] && goals[1] && goals[2]) {
+      // Exact affine through three pins (independent of the pivot).
+      const q = b.pin!.map((p) => p.at);
+      const u1 = [q[1][0] - q[0][0], q[1][1] - q[0][1]];
+      const u2 = [q[2][0] - q[0][0], q[2][1] - q[0][1]];
+      const g0: [number, number] = [goals[0]![0] + p0[0], goals[0]![1] + p0[1]];
+      const v1 = [goals[1]![0] - goals[0]![0], goals[1]![1] - goals[0]![1]];
+      const v2 = [goals[2]![0] - goals[0]![0], goals[2]![1] - goals[0]![1]];
+      const du = u1[0] * u2[1] - u1[1] * u2[0];
+      if (Math.abs(du) > 1e-6) {
+        [a, bb, c, dd] = solveLinear(u1, u2, v1, v2, du);
+        t0 = g0[0] - (a * q[0][0] + c * q[0][1]);
+        t1 = g0[1] - (bb * q[0][0] + dd * q[0][1]);
+      }
+    } else if (goals[0]) {
+      const v1 = goals[0];
+      const u1: [number, number] = [b.pin![0].at[0] - px, b.pin![0].at[1] - py];
+      const v2 = n > 1 ? goals[1] : undefined;
+      const u2: [number, number] | undefined = n > 1 ? [b.pin![1].at[0] - px, b.pin![1].at[1] - py] : undefined;
+      const du = u2 ? u1[0] * u2[1] - u1[1] * u2[0] : 0;
+      if (v2 && u2 && Math.abs(du) > 1e-6) {
+        [a, bb, c, dd] = solveLinear(u1, u2, v1, v2, du);
+      } else {
+        // Rotate + stretch along the pin direction, keeping the perpendicular scale.
+        const wx = a * u1[0] + c * u1[1];
+        const wy = bb * u1[0] + dd * u1[1];
+        const wl = Math.hypot(wx, wy);
+        const vl = Math.hypot(v1[0], v1[1]);
+        if (wl > 1e-9 && vl > 1e-9) {
+          const ex = wx / wl;
+          const ey = wy / wl;
+          const st = vl / wl - 1;
+          // stretch along e: S = I + st·e·eᵀ, then rotate onto the goal: C = R · S
+          const s00 = 1 + st * ex * ex;
+          const s01 = st * ex * ey;
+          const s11 = 1 + st * ey * ey;
+          const ang = Math.atan2(v1[1], v1[0]) - Math.atan2(wy, wx);
+          const rc = Math.cos(ang);
+          const rs = Math.sin(ang);
+          const c00 = rc * s00 - rs * s01;
+          const c01 = rc * s01 - rs * s11;
+          const c10 = rs * s00 + rc * s01;
+          const c11 = rs * s01 + rc * s11;
+          [a, bb, c, dd] = [c00 * a + c01 * bb, c10 * a + c11 * bb, c00 * c + c01 * dd, c10 * c + c11 * dd];
+        }
+      }
+      t0 = p0[0] - (a * px + c * py);
+      t1 = p0[1] - (bb * px + dd * py);
+    }
+    const local: Mat = [a, bb, c, dd, t0, t1];
+    const world = mul(ctx.world, local);
+    const opacity = ch.opacity * d.vis;
+    bones[b.bi] = { local, world, opacity, depth: d.depth, yaw: ctx.yaw + ch.yaw, pitch: ctx.pitch + ch.pitch };
+    visit(b.index, b.children, {
+      pivot: b.pivot,
+      world,
+      yaw: ctx.yaw + ch.yaw,
+      pitch: ctx.pitch + ch.pitch,
+      depth: d.depth,
+      restDepth: d.restDepth,
+      fx: b.surface === 'volume' ? ctx.fx : ctx.fx * d.fx,
+      fy: b.surface === 'volume' ? ctx.fy : ctx.fy * d.fy,
+      pfx: safe(d.fx),
+      pfy: safe(d.fy),
+      syaw: b.surface === 'volume' ? ctx.yaw + ch.yaw : ctx.yaw + ch.yaw + b.normal[0],
+      spitch: b.surface === 'volume' ? ctx.pitch + ch.pitch : ctx.pitch + ch.pitch + b.normal[1],
+      opacity: ctx.opacity * opacity,
+    });
   };
 
   visit(-1, rig.nodes, {
@@ -203,10 +348,25 @@ export function solve(rig: Rig, input: SolveInput, opts: SolveOptions = {}, prev
     restDepth: 0,
     fx: 1,
     fy: 1,
+    pfx: 1,
+    pfy: 1,
+    syaw: 0,
+    spitch: 0,
     opacity: 1,
   });
+  for (let i = 0; i < deferred.length; i++) solvePinned(deferred[i]);
 
   return { bones, slots: input.slots, order };
+}
+
+/** Linear map A with A·u1 = v1 and A·u2 = v2 (`du` = det[u1 u2]), as [a, b, c, d]. */
+function solveLinear(u1: number[], u2: number[], v1: number[], v2: number[], du: number): [number, number, number, number] {
+  // A = [v1 v2] · [u1 u2]⁻¹
+  const i00 = u2[1] / du;
+  const i01 = -u2[0] / du;
+  const i10 = -u1[1] / du;
+  const i11 = u1[0] / du;
+  return [v1[0] * i00 + v2[0] * i10, v1[1] * i00 + v2[1] * i10, v1[0] * i01 + v2[0] * i11, v1[1] * i01 + v2[1] * i11];
 }
 
 /** World-space pivot of the first instance of a bone (after solving). */

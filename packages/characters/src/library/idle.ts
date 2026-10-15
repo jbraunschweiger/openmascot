@@ -3,12 +3,13 @@ import { cycle, defineClips, keys } from '@openmascot/core';
 
 export const idleClips = defineClips({
   idle: {
-    description: 'Calm standing loop: soft wing sway and weight shift. Breathing, blinking and glances are layered on by the runtime.',
+    description: 'Calm standing loop: wings relaxed against the flanks (wingFold 0.5) with a soft sway and weight shift. Breathing, blinking and glances are layered on by the runtime.',
     category: 'idle',
     duration: 4,
     loop: true,
     params: {
-      flap: cycle(4, [0.02, 0.1, 0.02, -0.04]),
+      wingFold: cycle(4, [0.5, 0.46, 0.5, 0.54]),
+      flap: cycle(4, [0.02, 0.08, 0.02, -0.04]),
       lean: cycle(4, [0, 0.05, 0, -0.05]),
     },
     bones: {
@@ -40,10 +41,11 @@ export const idleClips = defineClips({
   },
 
   'fidget-wing-stretch': {
-    description: 'Big satisfied wing stretch.',
+    description: 'Big satisfied wing stretch: the wings unfold all the way, hold, and settle back.',
     category: 'fidget',
     duration: 1.8,
     params: {
+      wingFold: keys('sineInOut', [0, 0.5], [0.5, 0], [1.1, 0], [1.6, 0.5]),
       flap: keys('sineInOut', [0, 0], [0.5, 0.75], [1.1, 0.75], [1.8, 0]),
       squash: keys('sineInOut', [0, 0], [0.5, -0.25], [1.1, -0.25], [1.4, 0.1], [1.8, 0]),
     },
@@ -57,6 +59,7 @@ export const idleClips = defineClips({
     params: {
       squash: keys('sineInOut', [0, 0], [0.12, 0.45], [0.22, -0.3], [0.45, -0.1], [0.62, 0.35], [0.9, 0]),
       flap: keys('sineInOut', [0, 0], [0.2, 0.6], [0.4, -0.5], [0.62, 0.2], [0.9, 0]),
+      wingFold: keys('sineInOut', [0, 0.5], [0.2, 0.25], [0.62, 0.35], [0.9, 0.5]),
     },
     bones: {
       root: { y: keys('quadOut', [0, 0], [0.14, 0], [0.38, -22], [0.6, 0, 'quadIn']) },

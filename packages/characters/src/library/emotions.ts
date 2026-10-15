@@ -4,20 +4,21 @@
  * accent frame. See docs/animation.md.
  *
  * Conventions used below:
- * - Folded-wing emotes sweep the wings down (flap < 0) right before swapping
- *   the slot to `folded`, and sweep them open again before the end, so the
- *   art swap hides inside a fast motion.
+ * - Wings use the portable `wingFold` param: 0 = spread wide (expressive
+ *   beats), RELAXED (0.5) = resting, 1 = tucked tight (sad, shy, sleepy…).
+ *   Clips start and end at RELAXED, the idle value.
  * - Every bone channel returns to rest on the last key for a seamless
  *   crossfade back to idle.
  */
 import { defineClips, keys, wave } from '@openmascot/core';
 import type { Keyframe } from '@openmascot/core';
 
-/** Fold both wings at `t0`, unfold at `t1`. */
-const foldWings = (t0: number, t1: number): Record<string, [number, string][]> => ({
-  'wing-l': [[t0, 'folded'], [t1, 'spread']],
-  'wing-r': [[t0, 'folded'], [t1, 'spread']],
-});
+/** Resting `wingFold` (wings half-tucked); every clip starts and ends here. */
+const RELAXED = 0.5;
+
+/** `wingFold` keys: tuck the wings in from `t0` (0.3 s), hold, open back to relaxed by `t1`. */
+const tuck = (t0: number, t1: number, to = 1): Keyframe[] =>
+  keys('sineInOut', [0, RELAXED], [t0, RELAXED], [t0 + 0.3, to], [t1 - 0.3, to], [t1, RELAXED]);
 
 /** Damped oscillation sampled into keys (chuckles, shivers, wobbles). */
 function shake(t0: number, t1: number, amp: number, cycles: number, offset = 0): Keyframe[] {
@@ -44,6 +45,7 @@ export const emotionsClips = defineClips({
       squash: keys('sineInOut', [0, 0], [0.14, 0.5, 'quadOut'], [0.28, -0.5], [0.46, -0.1], [0.62, 0.45, 'quadOut'], [0.76, -0.25], [0.9, -0.05], [1.02, 0.3], [1.16, -0.08], [1.32, 0]),
       flap: keys('sineInOut', [0, 0], [0.14, -0.6], [0.3, 1.25, 'backOut'], [0.5, 0.85], [0.62, -0.25], [0.78, 0.75], [0.92, 1.0], [1.04, 0.35], [1.3, 0.5], [1.7, 0]),
       lookY: keys('sineInOut', [0, 0], [0.14, 0.15], [0.4, -0.25], [0.7, 0], [1.7, 0]),
+      wingFold: keys('sineInOut', [0, RELAXED], [0.14, 0.6], [0.3, 0, 'backOut'], [1.2, 0.1], [1.7, RELAXED]),
     },
     bones: {
       root: { y: keys('quadOut', [0, 0], [0.16, 0], [0.42, -46, 'quadIn'], [0.62, 0, 'quadOut'], [0.78, 0], [0.9, -16, 'quadIn'], [1.02, 0], [1.7, 0]) },
@@ -69,6 +71,7 @@ export const emotionsClips = defineClips({
       squash: keys('sineInOut', [0, 0], [0.12, 0.3], [0.26, -0.2], [0.44, 0.25], [0.6, -0.15], [0.84, 0.2], [1.0, -0.1], [1.25, 0.08], [1.6, 0]),
       lean: keys('sineInOut', [0, 0], [0.3, 0.3], [0.7, -0.3], [1.1, 0.22], [1.5, -0.08], [2, 0]),
       flap: keys('sineInOut', [0, 0], [0.18, 0.45], [0.36, 0.1], [0.56, 0.5], [0.76, 0.1], [0.98, 0.45], [1.3, 0.15], [2, 0]),
+      wingFold: keys('sineInOut', [0, RELAXED], [0.18, 0.2], [1.3, 0.25], [2, RELAXED]),
     },
     bones: {
       root: { y: keys('quadOut', [0, 0], [0.12, 0], [0.26, -14, 'quadIn'], [0.44, 0, 'quadOut'], [0.6, -10, 'quadIn'], [0.84, 0], [2, 0]) },
@@ -84,9 +87,9 @@ export const emotionsClips = defineClips({
     duration: 2.3,
     fadeIn: 0.15,
     expression: [[0, 'love']],
-    slots: foldWings(0.12, 1.98),
     params: {
-      flap: keys('sineInOut', [0, 0], [0.12, -0.7, 'quadOut'], [0.3, 0], [1.88, 0], [1.98, -0.55, 'backOut'], [2.3, 0]),
+      wingFold: tuck(0.06, 2.25),
+      flap: keys('sineInOut', [0, 0], [0.12, -0.3], [0.4, 0], [2.3, 0]),
       squash: keys('sineInOut', [0, 0], [0.14, 0.25], [0.32, -0.12], [0.5, 0.12], [1.9, 0.12], [2.1, -0.05], [2.3, 0]),
       lean: keys('sineInOut', [0, 0], [0.5, 0.25], [1.05, -0.2], [1.6, 0.22], [2.3, 0]),
     },
@@ -96,15 +99,16 @@ export const emotionsClips = defineClips({
         rot: keys('sineInOut', [0, 0], [0.4, 12], [1.0, 6], [1.5, 13], [2.0, 3], [2.3, 0]),
         dz: keys('sineInOut', [0, 0], [0.4, 8], [1.9, 8], [2.3, 0]),
       },
+      // the tucked wings wrap forward around the body: a self-hug
       'wing-l': {
-        x: keys('backOut', [0, 0], [0.12, 0], [0.38, 16], [1.0, 13, 'sineInOut'], [1.45, 17, 'sineInOut'], [1.95, 0]),
-        rot: keys('backOut', [0, 0], [0.12, 0], [0.38, -12], [1.95, -12, 'step'], [1.98, 0]),
-        dz: keys('step', [0, 0], [0.12, 58], [1.98, 0]),
+        x: keys('backOut', [0, 0], [0.12, 0], [0.42, 16], [1.0, 13, 'sineInOut'], [1.45, 17, 'sineInOut'], [1.95, 14], [2.25, 0, 'sineInOut']),
+        rot: keys('sineInOut', [0, 0], [0.42, -10], [1.95, -10], [2.25, 0]),
+        dz: keys('sineInOut', [0, 0], [0.3, 58], [1.95, 58], [2.25, 0]),
       },
       'wing-r': {
-        x: keys('backOut', [0, 0], [0.12, 0], [0.38, -16], [1.0, -13, 'sineInOut'], [1.45, -17, 'sineInOut'], [1.95, 0]),
-        rot: keys('backOut', [0, 0], [0.12, 0], [0.38, 12], [1.95, 12, 'step'], [1.98, 0]),
-        dz: keys('step', [0, 0], [0.12, 58], [1.98, 0]),
+        x: keys('backOut', [0, 0], [0.12, 0], [0.42, -16], [1.0, -13, 'sineInOut'], [1.45, -17, 'sineInOut'], [1.95, -14], [2.25, 0, 'sineInOut']),
+        rot: keys('sineInOut', [0, 0], [0.42, 10], [1.95, 10], [2.25, 0]),
+        dz: keys('sineInOut', [0, 0], [0.3, 58], [1.95, 58], [2.25, 0]),
       },
     },
     events: [
@@ -131,6 +135,7 @@ export const emotionsClips = defineClips({
       ],
       lean: keys('sineInOut', [0, 0], [0.8, 0], [1.2, 0.2], [1.6, -0.18], [2.0, 0.12], [2.5, 0]),
       lookY: keys('sineInOut', [0, 0], [0.25, -0.3], [0.8, 0.15], [2.1, 0.15], [2.5, 0]),
+      wingFold: keys('sineInOut', [0, RELAXED], [0.26, 0.05, 'backOut'], [0.8, 0.3], [2.2, 0.3], [2.5, RELAXED]),
     },
     bones: {
       root: { y: keys('quadOut', [0, 0], [0.1, 0], [0.28, -22, 'quadIn'], [0.48, 0], [2.5, 0]) },
@@ -155,9 +160,8 @@ export const emotionsClips = defineClips({
     fadeIn: 0.2,
     suppress: { look: true },
     expression: [[0, 'unimpressed']],
-    slots: foldWings(0.12, 2.1),
     params: {
-      flap: keys('sineInOut', [0, 0], [0.12, -0.6, 'quadOut'], [0.35, 0], [2.0, 0], [2.1, -0.5, 'backOut'], [2.4, 0]),
+      wingFold: tuck(0.05, 2.35),
       squash: keys('sineInOut', [0, 0], [0.9, 0], [1.2, -0.12], [1.6, 0.16], [2.1, 0.1], [2.4, 0]),
       lookX: keys('cubicInOut', [0, 0], [0.5, 0], [0.75, 0.55], [1.25, 0.55], [1.5, 0], [2.4, 0]),
     },
@@ -187,6 +191,7 @@ export const emotionsClips = defineClips({
         [1.7, -0.2, 'sineInOut'],
         [2.1, 0],
       ],
+      wingFold: keys('sineInOut', [0, RELAXED], [0.28, 0.1], [1.55, 0.15], [2.1, RELAXED]),
     },
     bones: {
       root: {
@@ -217,6 +222,7 @@ export const emotionsClips = defineClips({
       squash: keys('sineInOut', [0, 0], [0.15, 0.2], [0.3, -0.15], [0.45, 0.15], [0.6, -0.1], [0.75, 0.15], [0.9, -0.1], [1.05, 0.15], [1.2, -0.1], [1.35, 0.15], [1.5, -0.1], [1.65, 0.15], [1.8, -0.1], [2.1, 0]),
       flap: keys('sineInOut', [0, 0], [0.4, 0.6], [1.0, 0.25], [1.6, 0.6], [2.4, 0]),
       lean: keys('sineInOut', [0, 0], [0.4, -0.2], [1.0, 0.2], [1.6, -0.2], [2.1, 0]),
+      wingFold: keys('sineInOut', [0, RELAXED], [0.4, 0.2], [2.0, 0.25], [2.4, RELAXED]),
     },
     bones: {
       root: { y: keys('sineInOut', [0, 0], [0.3, -8], [0.45, 0], [0.6, -6], [0.75, 0], [0.9, -8], [1.05, 0], [1.2, -6], [1.35, 0], [1.5, -8], [1.65, 0], [2.4, 0]) },
@@ -243,6 +249,7 @@ export const emotionsClips = defineClips({
       squash: keys('sineInOut', [0, 0], [0.16, 0.35, 'quadOut'], [0.36, -0.28, 'backOut'], [1.1, -0.22], [1.3, 0.12], [1.5, -0.05], [2.2, 0]),
       flap: keys('sineInOut', [0, 0], [0.16, 0.35], [0.38, -0.45, 'backOut'], [1.1, -0.4], [1.35, 0.25, 'backOut'], [1.8, 0.1], [2.2, 0]),
       lookY: keys('sineInOut', [0, 0], [0.16, 0.25], [0.4, -0.1], [1.15, -0.1], [1.32, 0.35], [1.55, -0.15], [2.2, 0]),
+      wingFold: keys('sineInOut', [0, RELAXED], [0.16, 0.6], [0.38, 0, 'backOut'], [1.6, 0.1], [2.2, RELAXED]),
     },
     bones: {
       root: { y: keys('sineInOut', [0, 0], [1.2, 0], [1.32, 3], [1.5, 0]) },
@@ -267,9 +274,9 @@ export const emotionsClips = defineClips({
     fadeIn: 0.25,
     suppress: { look: true },
     expression: [[0, 'sad']],
-    slots: foldWings(0.14, 2.3),
     params: {
-      flap: keys('sineInOut', [0, 0], [0.14, -0.6, 'quadOut'], [0.4, 0], [2.2, 0], [2.3, -0.5, 'backOut'], [2.6, 0]),
+      wingFold: tuck(0.1, 2.55),
+      flap: keys('sineInOut', [0, 0], [0.8, -0.2], [2.2, -0.2], [2.6, 0]),
       squash: keys('sineInOut', [0, 0], [0.3, -0.08], [0.8, 0.3], [1.35, 0.26], [1.45, 0.34], [1.55, 0.26], [2.2, 0.28], [2.6, 0]),
       lookY: keys('sineInOut', [0, 0], [0.8, 0.35], [2.1, 0.3], [2.6, 0]),
     },
@@ -297,6 +304,7 @@ export const emotionsClips = defineClips({
       squash: keys('quadOut', [0, 0], [0.06, 0.25], [0.16, -0.6], [0.4, -0.3, 'sineInOut'], [0.56, 0.3, 'quadOut'], [0.72, -0.1, 'sineInOut'], [0.95, 0]),
       flap: keys('quadOut', [0, 0], [0.06, -0.2], [0.18, 1.35], [0.5, 1.0, 'sineInOut'], [0.62, -0.2, 'sineInOut'], [0.9, 0.15], [1.5, 0]),
       lookY: keys('quadOut', [0, 0], [0.18, -0.35], [0.6, -0.2, 'sineInOut'], [1.5, 0]),
+      wingFold: keys('quadOut', [0, RELAXED], [0.18, 0], [0.6, 0.15, 'sineInOut'], [1.5, RELAXED]),
     },
     bones: {
       root: { y: keys('quadOut', [0, 0], [0.06, 0], [0.24, -30, 'sineInOut'], [0.4, -28, 'quadIn'], [0.56, 0], [1.5, 0]) },
@@ -349,6 +357,7 @@ export const emotionsClips = defineClips({
       flap: [[0, 0, 'sineInOut'], ...shake(0.2, 1.35, 0.45, 6, 0.2), [1.9, 0]],
       lookY: keys('sineInOut', [0, 0], [0.22, -0.7], [1.2, -0.55], [1.6, 0.1], [1.9, 0]),
       lean: keys('sineInOut', [0, 0], [0.3, -0.2], [0.8, 0.15], [1.3, -0.12], [1.9, 0]),
+      wingFold: keys('sineInOut', [0, RELAXED], [0.2, 0.3], [1.35, 0.3], [1.9, RELAXED]),
     },
     bones: {
       root: { y: [[0, 0, 'sineInOut'], ...shake(0.15, 1.35, 5, 6).map(([t, v]) => [t, -Math.abs(v), 'sineInOut'] as Keyframe), [1.9, 0]] },
@@ -369,8 +378,8 @@ export const emotionsClips = defineClips({
     fadeIn: 0.4,
     suppress: { look: true, blink: true },
     expression: [[0, 'sleepy']],
-    slots: { 'wing-l': [[0, 'folded']], 'wing-r': [[0, 'folded']] },
     params: {
+      wingFold: [[0, 1]],
       squash: keys('sineInOut', [0, 0.12], [1.4, 0.24], [2.8, 0.14], [3.3, 0.26], [3.5, 0.06, 'backOut'], [4, 0.12]),
       lookY: keys('sineInOut', [0, 0.1], [3.2, 0.55, 'quadIn'], [3.38, -0.05, 'backOut'], [4, 0.1]),
     },
@@ -394,12 +403,11 @@ export const emotionsClips = defineClips({
     suppress: { look: true },
     expression: [[0, 'neutral'], [1.05, 'love'], [1.5, 'neutral']],
     slots: {
-      ...foldWings(0.12, 2.1),
       blush: [[0.1, 'on'], [2.2, 'off']],
       mouth: [[0, 'smile']],
     },
     params: {
-      flap: keys('sineInOut', [0, 0], [0.12, -0.6, 'quadOut'], [0.35, 0], [2.0, 0], [2.1, -0.5, 'backOut'], [2.4, 0]),
+      wingFold: tuck(0.05, 2.35, 0.92),
       lookX: keys('cubicInOut', [0, 0], [0.35, -0.65], [0.95, -0.55], [1.15, 0.05], [1.45, 0.05], [1.7, -0.6], [2.1, -0.5], [2.4, 0]),
       lookY: keys('sineInOut', [0, 0], [0.35, 0.4], [0.95, 0.35], [1.15, 0.05], [1.45, 0.05], [1.7, 0.4], [2.4, 0]),
       squash: keys('sineInOut', [0, 0], [0.35, 0.15], [2.1, 0.12], [2.4, 0]),
@@ -411,8 +419,8 @@ export const emotionsClips = defineClips({
         rot: keys('sineInOut', [0, 0], [0.5, 0], [0.7, -14], [0.9, 6], [1.1, -10], [1.3, 0]),
         y: keys('sineInOut', [0, 0], [0.5, 0], [0.7, -5], [0.9, -2], [1.1, -4], [1.3, 0]),
       },
-      'wing-l': { x: keys('sineInOut', [0, 0], [0.12, 0], [0.4, 8], [2.05, 8], [2.1, 0]) },
-      'wing-r': { x: keys('sineInOut', [0, 0], [0.12, 0], [0.4, -8], [2.05, -8], [2.1, 0]) },
+      'wing-l': { x: keys('sineInOut', [0, 0], [0.12, 0], [0.4, 8], [2.05, 8], [2.35, 0]) },
+      'wing-r': { x: keys('sineInOut', [0, 0], [0.12, 0], [0.4, -8], [2.05, -8], [2.35, 0]) },
     },
     events: [{ t: 1.1, effect: 'hearts', at: 'head', params: { count: 1, size: 0.6 } }],
   },
@@ -429,14 +437,16 @@ export const emotionsClips = defineClips({
       lookX: keys('cubicInOut', [0, 0], [0.3, 0.3], [0.9, 0.3], [1.15, -0.3], [1.9, -0.3], [2.3, 0]),
       lookY: keys('sineInOut', [0, 0], [0.3, -0.25], [1.9, -0.2], [2.3, 0]),
       squash: keys('sineInOut', [0, 0], [0.15, 0.12], [0.35, -0.05], [1.1, 0.05], [1.3, -0.04], [2.3, 0]),
+      // the right wing reaches up to scratch the head
+      raiseR: keys('sineInOut', [0, 0], [0.9, 0], [1.15, 0.8], [1.3, 0.62], [1.42, 0.82], [1.54, 0.62], [1.66, 0.82], [1.78, 0.66], [2.1, 0]),
     },
     bones: {
       head: {
         rot: keys('backOut', [0, 0], [0.32, 15], [0.92, 13, 'sineInOut'], [1.2, -12, 'backOut'], [1.9, -10, 'sineInOut'], [2.3, 0]),
         x: keys('sineInOut', [0, 0], [0.32, 3], [0.92, 3], [1.2, -3], [1.9, -3], [2.3, 0]),
       },
-      // wing-r reaches up to scratch the head
-      'wing-r': { rot: keys('sineInOut', [0, 0], [0.9, 0], [1.15, -38], [1.3, -30], [1.42, -40], [1.54, -30], [1.66, -40], [1.78, -32], [2.1, 0]) },
+      // scratching: a little 3D wrist wiggle on the raised wing
+      'wing-r': { yaw: keys('sineInOut', [0, 0], [1.15, 0], [1.3, -14], [1.42, 6], [1.54, -14], [1.66, 6], [1.78, -8], [2.1, 0]) },
     },
     events: [{ t: 0.3, effect: 'question', at: 'head', params: { side: 1 } }],
   },
@@ -453,6 +463,8 @@ export const emotionsClips = defineClips({
       squash: keys('sineInOut', [0, 0], [0.2, 0.6, 'quadOut'], [0.36, -0.55], [0.7, -0.2], [0.9, 0.55, 'quadOut'], [1.05, -0.2], [1.2, 0.05], [1.4, -0.15], [1.6, 0.1], [1.8, -0.12], [2.05, 0.05], [2.4, 0]),
       flap: keys('sineInOut', [0, 0], [0.2, -0.6], [0.38, 1.35, 'backOut'], [0.7, 1.1], [0.88, -0.4], [1.05, 0.3], [1.3, 1.3, 'backOut'], [1.45, 0.4], [1.65, 1.3, 'backOut'], [1.85, 0.4], [2.2, 0.15], [2.6, 0]),
       lookY: keys('sineInOut', [0, 0], [0.2, 0.15], [0.5, -0.3], [0.9, 0.05], [1.3, -0.25], [2.2, 0]),
+      // wings half-tucked through the spinning leap, flung open on landing
+      wingFold: keys('sineInOut', [0, RELAXED], [0.2, 0.6], [0.36, 0.45], [0.8, 0.45], [0.95, 0, 'backOut'], [2.2, 0.15], [2.6, RELAXED]),
     },
     bones: {
       root: {

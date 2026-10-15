@@ -33,7 +33,7 @@ export const cheer = defineClip({
     flap: keys('backOut', [0, 0], [0.3, 1], [0.8, 0.2], [1.2, 0]),
   },
   expression: [[0, 'excited'], [0.4, 'joyful']],   // step changes
-  slots: { 'wing-l': [[0, 'spread']] },             // direct slot overrides (step)
+  slots: { mouth: [[0.4, 'grin']] },                // direct slot overrides (step)
   events: [{ t: 0.45, effect: 'sparkles', at: 'head', params: { count: 5 } }],
   suppress: { look: true },     // disable alive layers while dominant
   fadeIn: 0.15,                 // crossfade into this clip
@@ -87,6 +87,18 @@ params work across characters. Echo implements:
 | `squash` | −1..1 | + squash down / − stretch up, anchored at the feet |
 | `flap` | −1.5..1.5 | wings: +1 both up, −1 both down/forward |
 | `lean` | −1.5..1.5 | lean whole body (±1 → ±12°) |
+| `wingFold` | 0..1 | 0 = wings spread wide, **0.5 = relaxed (Echo's resting value)**, 1 = tucked tight against the body. Clips start/end at 0.5; spread for expressive beats, tuck for sad/shy/cosy, tuck ≈0.8 through spins |
+| `raiseL`, `raiseR` | −1..1.5 | lift **and open** one wing: 1 ≈ raised level with the head, 1.5 = overhead, negative tucks it (−1 = folded down). Waves, points, pumps, scratches |
+
+**Rest params.** A character can declare `restParams` (Echo: `{ wingFold: 0.5 }`):
+params a clip doesn't animate start from these values in the runtime, so a
+clip that never mentions wings keeps them relaxed instead of spread. The rest
+drawing (`resolvePose` of an empty pose) is unaffected.
+
+**Combined drivers.** A driver can take a weighted sum of params as input:
+`{ bone: 'wing-tip-l', channel: 'rot', curve, input: { wingFold: 1, raiseL: -1 } }`
+— raising Echo's left wing also unfolds it, and the curve's end values clamp
+the result.
 
 Prefer params for "what" (look, flap, squash) and bone channels for "where"
 (root travel, head tilt, spins).

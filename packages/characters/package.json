@@ -1,21 +1,131 @@
 {
   "name": "@openmascot/characters",
   "version": "0.1.0",
-  "description": "Ready-made OpenMascot characters (Echo the bat, ...).",
   "license": "MIT",
+  "author": "Jakob Braunschweiger (https://github.com/jbraunschweiger)",
+  "homepage": "https://jbraunschweiger.github.io/openmascot/",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/jbraunschweiger/openmascot.git",
+    "directory": "packages/characters"
+  },
+  "bugs": {
+    "url": "https://github.com/jbraunschweiger/openmascot/issues"
+  },
+  "description": "Ready-made OpenMascot characters (Echo, Pip, Riff) and the shared clip library. Import one character per subpath to keep bundles small.",
+  "keywords": [
+    "mascot",
+    "character",
+    "svg",
+    "animation",
+    "rigging",
+    "pseudo-3d",
+    "openmascot",
+    "clips",
+    "emotes",
+    "dance"
+  ],
   "type": "module",
   "sideEffects": false,
   "main": "./src/index.ts",
   "types": "./src/index.ts",
-  "exports": { ".": "./src/index.ts" },
-  "publishConfig": {
-    "main": "./dist/index.js",
-    "types": "./dist/index.d.ts",
-    "exports": { ".": { "types": "./dist/index.d.ts", "import": "./dist/index.js" } }
+  "exports": {
+    ".": "./src/index.ts",
+    "./echo": "./src/echo/index.ts",
+    "./pip": "./src/pip/index.ts",
+    "./riff": "./src/riff/index.ts",
+    "./library": "./src/library/index.ts",
+    "./package.json": "./package.json"
   },
-  "files": ["dist", "src", "README.md"],
-  "scripts": { "build": "tsup src/index.ts --format esm --dts --clean" },
-  "repository": { "type": "git", "url": "https://github.com/jbraunschweiger/openmascot", "directory": "packages/characters" },
-  "keywords": ["mascot", "svg", "animation", "rigging", "character"],
-  "dependencies": {"@openmascot/core": "workspace:*"}
+  "publishConfig": {
+    "access": "public",
+    "main": "./dist/index.cjs",
+    "module": "./dist/index.js",
+    "types": "./dist/index.d.cts",
+    "exports": {
+      ".": {
+        "import": {
+          "types": "./dist/index.d.ts",
+          "default": "./dist/index.js"
+        },
+        "require": {
+          "types": "./dist/index.d.cts",
+          "default": "./dist/index.cjs"
+        }
+      },
+      "./echo": {
+        "import": {
+          "types": "./dist/echo/index.d.ts",
+          "default": "./dist/echo/index.js"
+        },
+        "require": {
+          "types": "./dist/echo/index.d.cts",
+          "default": "./dist/echo/index.cjs"
+        }
+      },
+      "./pip": {
+        "import": {
+          "types": "./dist/pip/index.d.ts",
+          "default": "./dist/pip/index.js"
+        },
+        "require": {
+          "types": "./dist/pip/index.d.cts",
+          "default": "./dist/pip/index.cjs"
+        }
+      },
+      "./riff": {
+        "import": {
+          "types": "./dist/riff/index.d.ts",
+          "default": "./dist/riff/index.js"
+        },
+        "require": {
+          "types": "./dist/riff/index.d.cts",
+          "default": "./dist/riff/index.cjs"
+        }
+      },
+      "./library": {
+        "import": {
+          "types": "./dist/library/index.d.ts",
+          "default": "./dist/library/index.js"
+        },
+        "require": {
+          "types": "./dist/library/index.d.cts",
+          "default": "./dist/library/index.cjs"
+        }
+      },
+      "./package.json": "./package.json"
+    },
+    "typesVersions": {
+      "*": {
+        "echo": [
+          "./dist/echo/index.d.cts"
+        ],
+        "pip": [
+          "./dist/pip/index.d.cts"
+        ],
+        "riff": [
+          "./dist/riff/index.d.cts"
+        ],
+        "library": [
+          "./dist/library/index.d.cts"
+        ]
+      }
+    }
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
+  "engines": {
+    "node": ">=18"
+  },
+  "scripts": {
+    "build": "tsup",
+    "prepack": "tsup",
+    "prepublishOnly": "node ../../scripts/prepublish-guard.mjs"
+  },
+  "dependencies": {
+    "@openmascot/core": "workspace:^"
+  }
 }

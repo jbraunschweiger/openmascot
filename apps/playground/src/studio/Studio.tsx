@@ -7,13 +7,16 @@
  *  - deterministic timeline scrubber + frame strip + onion skin
  *  - event log, exports, and a live JSON clip editor (great for AI-assisted authoring)
  *
- * Deep links: `#/studio?clip=fly-side&bg=dark&t=0.3`.
+ * Deep links: `#/studio?char=echo&clip=fly-side&bg=dark&t=0.3`. Switching characters remounts the
+ * workbench (keyed by character id) and carries over stage/playback prefs and the clip when it exists.
  */
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { Mascot, useMascotRef } from '@openmascot/react';
-import { lintClip, renderSvg, type Clip, type EffectDef, type Mascot as MascotRuntime, type MascotEvent } from '@openmascot/core';
+import { lintClip, renderSvg, type CharacterDef, type Clip, type EffectDef, type Mascot as MascotRuntime, type MascotEvent } from '@openmascot/core';
 import { ClipSim, composeSheet, frameSvg, sampleFrames, SIM_FPS, svgUri } from './frames';
-import { allClips, copyText, download, echo, getClip, groupedClips, hashParams, isBeats, seconds } from './shared';
+import { copyText, download, groupedClips, hashParams, isBeats, seconds } from './shared';
+import { CAST, castInfo, clipOf, clipsOf, getCharacter, hasExpression, paddedVb, setHashQuery, useCharacterSelection } from './cast';
+import { BrokenArt, CharacterAbout, CharacterPicker, ErrorBoundary } from './cast-ui';
 import { Panel, Segmented, Slider, Toggle } from './ui';
 import './studio.css';
 
@@ -21,9 +24,6 @@ import './studio.css';
 
 const STAGE_PAD: [number, number, number, number] = [96, 70, 30, 70];
 const STRIP_PAD = 40;
-const RIG_VB = (/viewBox="([^"]+)"/.exec(echo.svg)?.[1] ?? '-212 -242 424 252').split(/\s+/).map(Number);
-const STAGE_VB = [RIG_VB[0] - STAGE_PAD[3], RIG_VB[1] - STAGE_PAD[0], RIG_VB[2] + STAGE_PAD[1] + STAGE_PAD[3], RIG_VB[3] + STAGE_PAD[0] + STAGE_PAD[2]];
-const GROUND_PCT = ((0 - STAGE_VB[1]) / STAGE_VB[3]) * 100;
 const STAGE_OPTIONS = { seed: 11 };
 
 type Bg = 'white' | 'lavender' | 'dark' | 'checker';
@@ -38,8 +38,13 @@ interface LogEntry {
   e: MascotEvent;
 }
 
-const POSE_KEYS = ['root.yaw', 'root.pitch', 'body.yaw', 'body.pitch', 'head.yaw', 'head.pitch'] as const;
-type PoseKey = (typeof POSE_KEYS)[number];
+const ALL_POSE_KEYS = ['root.yaw', 'root.pitch', 'body.yaw', 'body.pitch', 'head.yaw', 'head.pitch'] as const;
+type PoseKey = (typeof ALL_POSE_KEYS)[number];
+/** Standard anchor-ish bones offered in the effects menu when the rig has them. */
+const ANCHOR_BONES = ['head', 'mouth', 'body', 'root', 'wing-l', 'wing-r', 'ear-l', 'ear-r', 'foot-l', 'foot-r', 'tuft'];
+
+/** Stage/playback prefs carried across character switches (the workbench remounts per character). */
+const carry: Partial<{ bg: Bg; ground: boolean; track: boolean; alive: boolean; speed: number; fade: number; thenIdle: boolean; editor: string; queue: string[]; logFilter: 'all' | 'clips' | 'effects' }> = {};
 
 const EASES = ['linear', 'step', 'sineIn', 'sineOut', 'sineInOut', 'quadIn', 'quadOut', 'quadInOut', 'cubicIn', 'cubicOut', 'cubicInOut', 'backIn', 'backOut', 'backInOut', 'elasticOut', 'bounceOut'];
 const CHANNELS = 'x y rot sx sy yaw pitch dz opacity';
@@ -80,10 +85,58 @@ const STARTER: Clip = {
   events: [{ t: 0.45, effect: 'sparkles', at: 'head' }],
 };
 
+/** The starter clip, trimmed to the params/expressions/bones the character actually has. */
+function starterFor(c: CharacterDef): Clip {
+  const bones = new Set(castInfo(c)?.bones ?? []);
+  const params = Object.fromEntries(Object.entries(STARTER.params!).filter(([p]) => c.params?.[p]));
+  const fallback = hasExpression(c, 'happy') ? 'happy' : undefined;
+  const expression = STARTER.expression!.map(([t, e]) => [t, hasExpression(c, e) ? e : fallback] as [number, string | undefined]).filter((k): k is [number, string] => !!k[1]);
+  return {
+    ...STARTER,
+    description: params.flap ? STARTER.description : 'Hop, sparkles at the top.',
+    bones: Object.fromEntries(Object.entries(STARTER.bones!).filter(([b]) => bones.has(b))),
+    params,
+    expression: expression.length ? expression : undefined,
+    events: STARTER.events!.map((e) => ({ ...e, at: bones.has('head') || c.anchors?.head ? e.at : undefined })),
+  };
+}
+
 /* ------------------------------------------------------------------ */
 
 export function Studio() {
+  const [id, select] = useCharacterSelection();
+  const character = getCharacter(id) ?? CAST[0];
+  const picker = <CharacterPicker value={character.id} onChange={select} label="Character" />;
+  return (
+    <ErrorBoundary
+      resetKey={character.id}
+      fallback={(e) => (
+        <div className="st-root">
+          <div className="st-charbar">{picker}</div>
+          <div className="st-panel cx-crash">
+            <BrokenArt error={e} name={character.name} />
+            <p className="st-hint">This character crashed the studio. Pick another one above.</p>
+          </div>
+        </div>
+      )}
+    >
+      <StudioView key={character.id} character={character} picker={picker} onSelectCharacter={select} />
+    </ErrorBoundary>
+  );
+}
+
+function StudioView({ character, picker, onSelectCharacter }: { character: CharacterDef; picker: ReactNode; onSelectCharacter: (id: string) => void }) {
   const q = useMemo(hashParams, []);
+  const info = useMemo(() => castInfo(character), [character]);
+  const STAGE_VB = useMemo(() => paddedVb(character, STAGE_PAD), [character]);
+  const GROUND_PCT = ((0 - STAGE_VB[1]) / STAGE_VB[3]) * 100;
+  const STRIP_VB = useMemo(() => paddedVb(character, [STRIP_PAD, STRIP_PAD, STRIP_PAD, STRIP_PAD]), [character]);
+  const boneSet = useMemo(() => new Set(info?.bones ?? []), [info]);
+  const POSE_KEYS = useMemo(() => ALL_POSE_KEYS.filter((k) => boneSet.has(k.split('.')[0])), [boneSet]);
+  const anchors = useMemo(() => [...new Set([...Object.keys(character.anchors ?? {}), ...ANCHOR_BONES.filter((b) => boneSet.has(b))])], [character, boneSet]);
+  const allClips = () => clipsOf(character);
+  const getClip = (name: string) => clipOf(character, name);
+  const starter = useMemo(() => starterFor(character), [character]);
   const ref = useMascotRef();
   const [rt, setRt] = useState<MascotRuntime>();
 
@@ -96,20 +149,22 @@ export function Studio() {
   }, [ref]);
 
   /* stage */
-  const [bg, setBg] = useState<Bg>((q.get('bg') as Bg) || 'lavender');
-  const [ground, setGround] = useState(true);
-  const [track, setTrack] = useState(false);
-  const [alive, setAliveState] = useState(true);
+  const [bg, setBg] = useState<Bg>(() => carry.bg ?? ((q.get('bg') as Bg) || 'lavender'));
+  const [ground, setGround] = useState(carry.ground ?? true);
+  const [track, setTrack] = useState(carry.track ?? false);
+  const [alive, setAliveState] = useState(carry.alive ?? true);
 
   /* playback */
-  const initialName = q.get('clip') && getClip(q.get('clip')!) ? q.get('clip')! : 'idle';
+  const wanted = q.get('clip');
+  const idleName = character.idle?.clip ?? 'idle';
+  const initialName = wanted && getClip(wanted) ? wanted : idleName;
   const [current, setCurrent] = useState<Current>(() => ({ name: initialName, clip: getClip(initialName) ?? { duration: 1 } }));
-  const [speed, setSpeed] = useState(1);
-  const [fade, setFade] = useState(0.25);
-  const [thenIdle, setThenIdle] = useState(true);
+  const [speed, setSpeed] = useState(carry.speed ?? 1);
+  const [fade, setFade] = useState(carry.fade ?? 0.25);
+  const [thenIdle, setThenIdle] = useState(carry.thenIdle ?? true);
   const [bpm, setBpm] = useState(() => current.clip.bpm ?? 120);
   const [search, setSearch] = useState('');
-  const [queue, setQueue] = useState<string[]>([]);
+  const [queue, setQueue] = useState<string[]>(() => (carry.queue ?? []).filter((n) => getClip(n)));
   const [queueRunning, setQueueRunning] = useState(false);
   const queueToken = useRef(0);
 
@@ -117,13 +172,13 @@ export function Studio() {
   const [expr, setExpr] = useState<string | null>(null);
   const [anchor, setAnchor] = useState('');
   const [params, setParams] = useState<Record<string, number>>({});
-  const [pose, setPose] = useState<Record<PoseKey, number>>(() => Object.fromEntries(POSE_KEYS.map((k) => [k, 0])) as Record<PoseKey, number>);
+  const [pose, setPose] = useState<Record<PoseKey, number>>(() => Object.fromEntries(ALL_POSE_KEYS.map((k) => [k, 0])) as Record<PoseKey, number>);
   const poseClip = useRef<Clip>({
     name: '__pose',
     description: 'Studio pose override',
     duration: 1,
     loop: true,
-    bones: { root: { yaw: [[0, 0]], pitch: [[0, 0]] }, body: { yaw: [[0, 0]], pitch: [[0, 0]] }, head: { yaw: [[0, 0]], pitch: [[0, 0]] } },
+    bones: Object.fromEntries(['root', 'body', 'head'].filter((b) => boneSet.has(b)).map((b) => [b, { yaw: [[0, 0]], pitch: [[0, 0]] }])),
   });
 
   /* timeline */
@@ -139,8 +194,8 @@ export function Studio() {
   /* log, editor, toast */
   const [log, setLog] = useState<LogEntry[]>([]);
   const logSeq = useRef(0);
-  const [logFilter, setLogFilter] = useState<'all' | 'clips' | 'effects'>('all');
-  const [editor, setEditor] = useState(() => clipJson(STARTER));
+  const [logFilter, setLogFilter] = useState<'all' | 'clips' | 'effects'>(carry.logFilter ?? 'all');
+  const [editor, setEditor] = useState(() => carry.editor ?? clipJson(starter));
   const [problems, setProblems] = useState<{ level: 'error' | 'warn'; msg: string }[]>([]);
   const [toast, setToast] = useState<string | null>(null);
   const toastTimer = useRef<ReturnType<typeof setTimeout>>(undefined);
@@ -148,6 +203,18 @@ export function Studio() {
     setToast(msg);
     clearTimeout(toastTimer.current);
     toastTimer.current = setTimeout(() => setToast(null), 2200);
+  }, []);
+
+  // remember prefs for the next character; keep the URL in sync with the clip
+  useEffect(() => {
+    Object.assign(carry, { bg, ground, track, alive, speed, fade, thenIdle, editor, queue, logFilter });
+  });
+  useEffect(() => {
+    if (!current.custom && current.name !== '__pose') setHashQuery({ clip: current.name === idleName ? null : current.name });
+  }, [current, idleName]);
+  useEffect(() => {
+    if (wanted && wanted !== initialName) say(`${character.name} has no “${wanted}” clip — showing ${initialName}`);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const bpmEff = isBeats(current.clip) ? bpm : undefined;
@@ -260,7 +327,7 @@ export function Studio() {
   /* ---------------------------------------------------------------- */
   /* scrubbing                                                         */
 
-  const sim = useMemo(() => new ClipSim(echo, { ...current.clip, name: current.name }, bpmEff), [current, bpmEff]);
+  const sim = useMemo(() => new ClipSim(character, { ...current.clip, name: current.name }, bpmEff), [current, bpmEff]);
   const scrubT = scrub == null ? null : Math.min(Math.max(0, scrub), total);
 
   const enterScrub = (t?: number) => {
@@ -282,7 +349,7 @@ export function Studio() {
       const times: [number, 'prev' | 'next', number][] = [];
       for (let k = 2; k >= 1; k--) times.push([scrubT - (k * onionGap) / SIM_FPS, 'prev', k]);
       for (let k = 1; k <= 2; k++) times.push([scrubT + (k * onionGap) / SIM_FPS, 'next', k]);
-      const ghostSim = new ClipSim(echo, { ...current.clip, name: current.name }, bpmEff);
+      const ghostSim = new ClipSim(character, { ...current.clip, name: current.name }, bpmEff);
       for (const [t, side, k] of times) {
         if (t < 0 || t > total) continue;
         ghosts.push({ uri: svgUri(frameSvg(ghostSim, ghostSim.at(t), { padding: STAGE_PAD, particles: [] })), side, k });
@@ -292,7 +359,7 @@ export function Studio() {
   }, [sim, scrubT, onion, onionGap, current, bpmEff, total]);
 
   const strip = useMemo(() => {
-    const s = new ClipSim(echo, { ...current.clip, name: current.name }, bpmEff);
+    const s = new ClipSim(character, { ...current.clip, name: current.name }, bpmEff);
     return sampleFrames(s, total, stripN, { padding: STRIP_PAD });
   }, [current, bpmEff, total, stripN]);
 
@@ -388,7 +455,7 @@ export function Studio() {
   };
   const downloadSheet = () => {
     const tiles = strip.map((f) => ({ label: `${f.t.toFixed(2)}s`, svg: f.svg }));
-    download(`${current.name}-sheet.svg`, composeSheet(tiles, { title: `Echo — ${current.name}${bpmEff ? ` @ ${bpmEff} bpm` : ''}`, cols: Math.min(6, stripN) }));
+    download(`${current.name}-sheet.svg`, composeSheet(tiles, { title: `${character.name} — ${current.name}${bpmEff ? ` @ ${bpmEff} bpm` : ''}`, cols: Math.min(6, stripN) }));
   };
   const downloadFrame = () => {
     const r = runtime();
@@ -398,7 +465,7 @@ export function Studio() {
 
   /* editor */
   const knownBones = useMemo(() => new Set(Object.keys(rt?.rig.bonesByName ?? {})), [rt]);
-  const knownParams = useMemo(() => new Set(Object.keys(echo.params ?? {})), []);
+  const knownParams = useMemo(() => new Set(Object.keys(character.params ?? {})), [character]);
   const validate = (text: string): { clip?: Clip; problems: { level: 'error' | 'warn'; msg: string }[] } => {
     const out: { level: 'error' | 'warn'; msg: string }[] = [];
     let clip: Clip;
@@ -412,7 +479,7 @@ export function Studio() {
     for (const p of lintClip(clip, knownBones, knownParams)) out.push({ level: /^unknown (bone|param)/.test(p) ? 'warn' : 'error', msg: p });
     if (clip.units && clip.units !== 'beats' && clip.units !== 'seconds') out.push({ level: 'error', msg: `units must be "seconds" or "beats"` });
     if (clip.units === 'beats' && clip.bpm != null && !(clip.bpm > 0)) out.push({ level: 'error', msg: 'bpm must be > 0' });
-    for (const [t, e] of clip.expression ?? []) if (!echo.expressions[e]) out.push({ level: 'warn', msg: `expression @${t}: unknown expression "${e}"` });
+    for (const [t, e] of clip.expression ?? []) if (!hasExpression(character, e)) out.push({ level: 'warn', msg: `expression @${t}: unknown expression "${e}"` });
     for (const s in clip.slots ?? {}) {
       const slot = rt?.rig.slotsByName[s];
       if (!slot) out.push({ level: 'warn', msg: `unknown slot "${s}"` });
@@ -441,6 +508,9 @@ export function Studio() {
   useEffect(() => {
     (window as unknown as Record<string, unknown>).openmascotStudio = {
       runtime: rt,
+      character: character.id,
+      characters: () => CAST.map((c) => c.id),
+      setCharacter: (id: string) => onSelectCharacter(id),
       clips: () => Object.keys(allClips()),
       play: (name: string) => selectClip(name),
       playJson: (clip: Clip | string) => {
@@ -458,7 +528,7 @@ export function Studio() {
   /* ---------------------------------------------------------------- */
   /* render                                                            */
 
-  const groups = useMemo(() => groupedClips(), [rt]); // eslint-disable-line react-hooks/exhaustive-deps
+  const groups = useMemo(() => groupedClips(character), [character]);
   const filtered = groups
     .map(([cat, names]) => [cat, names.filter((n) => !search || n.includes(search.toLowerCase()) || (getClip(n)?.description ?? '').toLowerCase().includes(search.toLowerCase()))] as [string, string[]])
     .filter(([, n]) => n.length);
@@ -467,6 +537,7 @@ export function Studio() {
 
   return (
     <div className="st-root">
+      <div className="st-charbar">{picker}</div>
       <div className="st-grid">
         {/* ------------------------------ left ------------------------------ */}
         <aside className="st-col st-left">
@@ -558,7 +629,7 @@ export function Studio() {
               {ground && <div className="st-ground" style={{ top: `${GROUND_PCT}%` }} />}
               <Mascot
                 ref={ref}
-                character={echo}
+                character={character}
                 padding={STAGE_PAD}
                 options={STAGE_OPTIONS}
                 animation={initialName}
@@ -670,7 +741,7 @@ export function Studio() {
                 const on = scrubT != null && Math.abs(scrubT - f.t) < total / (stripN - 1) / 2;
                 return (
                   <button key={i} className={`st-thumb ${on ? 'on' : ''}`} onClick={() => enterScrub(f.t)} title={`Scrub to ${f.t.toFixed(2)}s`}>
-                    <span className="st-thumb-img">
+                    <span className="st-thumb-img" style={{ aspectRatio: `${STRIP_VB[2]} / ${STRIP_VB[3]}` }}>
                       {stripOnion && i > 0 && <img src={svgUri(strip[i - 1].svg)} className="st-ghost prev" alt="" style={{ opacity: 0.3 }} />}
                       <img src={svgUri(f.svg)} alt="" loading="lazy" />
                     </span>
@@ -690,7 +761,7 @@ export function Studio() {
                   <button className="st-btn sm ghost" onClick={loadIntoEditor} title="Load the current clip into the editor">
                     Load current
                   </button>
-                  <button className="st-btn sm ghost" onClick={() => (setEditor(clipJson(STARTER)), setProblems([]))}>
+                  <button className="st-btn sm ghost" onClick={() => (setEditor(clipJson(starter)), setProblems([]))}>
                     Starter
                   </button>
                   <button className="st-btn sm" onClick={runEditor} title="Validate & play (Ctrl/⌘+Enter)">
@@ -730,7 +801,7 @@ export function Studio() {
                   ))
                 )}
               </div>
-              <RigReference rt={rt} effects={effects} />
+              <RigReference rt={rt} effects={effects} character={character} />
             </Panel>
 
             <Panel
@@ -776,6 +847,10 @@ export function Studio() {
 
         {/* ------------------------------ right ------------------------------ */}
         <aside className="st-col st-right">
+          <Panel title="Character" collapsible>
+            <CharacterAbout c={character} compact />
+          </Panel>
+
           <Panel title="Clip">
             <div className="st-info">
               <div className="st-info-h">
@@ -839,7 +914,7 @@ export function Studio() {
               <button className={`st-pill ${expr == null ? 'on' : ''}`} onClick={() => (setExpr(null), runtime()?.setExpression(null))}>
                 auto
               </button>
-              {Object.keys(echo.expressions).map((e) => (
+              {Object.keys(character.expressions ?? {}).map((e) => (
                 <button key={e} className={`st-pill ${expr === e ? 'on' : ''}`} onClick={() => (setExpr(e), runtime()?.setExpression(e))}>
                   {e}
                 </button>
@@ -853,7 +928,7 @@ export function Studio() {
             actions={
               <select className="st-select" value={anchor} onChange={(e) => setAnchor(e.target.value)} title="Anchor">
                 <option value="">default anchor</option>
-                {['head', 'mouth', 'feet', 'body', 'wing-l', 'wing-r'].map((a) => (
+                {anchors.map((a) => (
                   <option key={a} value={a}>
                     at {a}
                   </option>
@@ -880,7 +955,7 @@ export function Studio() {
               </button>
             }
           >
-            {Object.entries(echo.params ?? {}).map(([name, def]) => (
+            {Object.entries(character.params ?? {}).map(([name, def]) => (
               <Slider
                 key={name}
                 label={name}
@@ -893,6 +968,7 @@ export function Studio() {
                 title={`${def.drives.length} driver(s): ${def.drives.map((d) => `${d.bone}.${d.channel}`).join(', ')}`}
               />
             ))}
+            {!Object.keys(character.params ?? {}).length && <p className="st-empty">{character.name} defines no params.</p>}
             <p className="st-hint">Overrides replace the runtime’s value (look, blink, breathe…) until reset.</p>
           </Panel>
 
@@ -919,6 +995,7 @@ export function Studio() {
                 format={(v) => `${v}°`}
               />
             ))}
+            {!POSE_KEYS.length && <p className="st-empty">{character.name} has no root/body/head bones.</p>}
             <p className="st-hint">Plays a held one-frame clip; drag to inspect parallax, culling and depth sorting.</p>
           </Panel>
 
@@ -944,26 +1021,26 @@ export function Studio() {
 
 /* ------------------------------------------------------------------ */
 
-function RigReference({ rt, effects }: { rt?: MascotRuntime; effects: EffectDef[] }) {
+function RigReference({ rt, effects, character }: { rt?: MascotRuntime; effects: EffectDef[]; character: CharacterDef }) {
   const text = useMemo(() => {
     if (!rt) return '';
     const lines: string[] = [];
-    lines.push(`character: ${echo.id} (${echo.name})`);
+    lines.push(`character: ${character.id} (${character.name})`);
     lines.push(`bones: ${Object.keys(rt.rig.bonesByName).join(', ')}`);
     lines.push(`channels: ${CHANNELS}`);
     lines.push(
-      `params: ${Object.entries(echo.params ?? {})
+      `params: ${Object.entries(character.params ?? {})
         .map(([n, d]) => `${n} [${d.min ?? -1}..${d.max ?? 1}]`)
         .join(', ')}`,
     );
     lines.push(`slots: ${rt.rig.slots.map((s) => `${s.name}(${s.variants.map((v) => v.name).join('|')})`).join(', ')}`);
-    lines.push(`expressions: ${Object.keys(echo.expressions).join(', ')}`);
+    lines.push(`expressions: ${Object.keys(character.expressions ?? {}).join(', ')}`);
     lines.push(`effects: ${effects.map((e) => e.name).join(', ')}`);
-    lines.push(`anchors: ${Object.keys(echo.anchors ?? {}).join(', ')} (or any bone, or [x, y])`);
+    lines.push(`anchors: ${Object.keys(character.anchors ?? {}).join(', ')} (or any bone, or [x, y])`);
     lines.push(`eases: ${EASES.join(', ')} or [x1,y1,x2,y2]`);
     lines.push(`categories: idle, fidget, emotion, gesture, pose, dance, locomotion`);
     return lines.join('\n');
-  }, [rt, effects]);
+  }, [rt, effects, character]);
   const [copied, setCopied] = useState(false);
   return (
     <details className="st-ref">

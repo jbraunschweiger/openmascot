@@ -270,9 +270,27 @@ read-only `runtime` (the `Mascot`) and `player` (the `MascotPlayer`).
 | export | |
 |---|---|
 | `echo`, `echoExpressions` | Echo the bat (`CharacterDef`) |
-| `characters` | registry by id (used by the CLI) |
+| `pip`, `pipExpressions` | Pip the bird |
+| `riff`, `riffExpressions` | Riff the frog |
+| `characters` | registry by id (used by the CLI and playground) |
 | `library` | the shared clip library (idle, fidgets, emotions, gestures, dances) |
 | `clipCategories(clips?)` | clip names grouped by `category` |
+
+Subpath exports bundle only what you import:
+
+```ts
+import { echo } from '@openmascot/characters/echo';
+import { pip } from '@openmascot/characters/pip';
+import { riff } from '@openmascot/characters/riff';
+import { library } from '@openmascot/characters/library';
+```
+
+All characters share the same expression names and map the standard params
+(`lookX lookY blink breathe squash flap lean wingFold raiseL raiseR`), so the
+shared library clips play on each of them. `CharacterDef.restParams` sets the
+value of params a clip doesn't animate (e.g. `{ wingFold: 0.5 }` for relaxed
+wings) and `CharacterDef.effectParams` sets per-character effect defaults (e.g.
+where `tears` start).
 
 ---
 

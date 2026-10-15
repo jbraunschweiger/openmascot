@@ -1,0 +1,68 @@
+name: Release
+
+# On every push to main, changesets/action either
+#  - opens/updates a "Version packages" PR when there are pending changesets
+#    (.changeset/*.md), or
+#  - when there are none, runs `pnpm release`: check + build + pack smoke test,
+#    then `changeset publish` for every package version not yet on npm (with
+#    npm provenance), then pushes git tags and creates GitHub releases.
+#
+# Publishing is skipped until the NPM_TOKEN repository secret exists.
+# See CONTRIBUTING.md → Publishing.
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+permissions:
+  contents: write # version commits, tags, GitHub releases
+  pull-requests: write # the version PR
+  id-token: write # npm provenance
+
+jobs:
+  release:
+    name: Version PR or publish
+    if: github.repository == 'jbraunschweiger/openmascot'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+
+      # pnpm version comes from the root package.json "packageManager" field.
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: pnpm
+          registry-url: https://registry.npmjs.org
+
+      - name: Install
+        run: pnpm install --frozen-lockfile
+
+      - name: npm auth
+        if: env.NPM_TOKEN != ''
+        # A literal ${NPM_TOKEN}: npm/pnpm expand it from the environment, so
+        # the secret itself is never written to disk.
+        run: echo '//registry.npmjs.org/:_authToken=${NPM_TOKEN}' >> ~/.npmrc
+
+      - name: Version PR or publish
+        uses: changesets/action@v2.1.2
+        with:
+          version-script: pnpm version-packages
+          # Without a token, only the version PR is maintained.
+          publish-script: ${{ env.NPM_TOKEN != '' && 'pnpm release' || '' }}
+          commit-message: 'Version packages'
+          pr-title: 'Version packages'
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+          NPM_CONFIG_PROVENANCE: 'true'

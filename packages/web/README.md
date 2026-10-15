@@ -6,8 +6,14 @@ that only touches changed attributes, a player that owns the animation loop
 pointer), and the `<open-mascot>` custom element.
 
 ```bash
-npm install @openmascot/web @openmascot/characters   # (0.1.0, not yet published)
+npm install @openmascot/web @openmascot/characters
+# or: pnpm add @openmascot/web @openmascot/characters
+# or: yarn add @openmascot/web @openmascot/characters
 ```
+
+`@openmascot/web` is safe to import during SSR: nothing touches the DOM until
+you create a player or call `defineOpenMascot()`, which is also the only thing
+that registers the custom element (the package has no side effects).
 
 ### Custom element
 
@@ -15,9 +21,40 @@ npm install @openmascot/web @openmascot/characters   # (0.1.0, not yet published
 <open-mascot character="echo" animation="idle" look-at-pointer style="width:240px"></open-mascot>
 <script type="module">
   import { defineOpenMascot } from '@openmascot/web';
-  import { echo } from '@openmascot/characters';
+  import { echo } from '@openmascot/characters/echo';
   defineOpenMascot({ characters: { echo } });
   document.querySelector('open-mascot').play('wave');
+</script>
+```
+
+No build step? Load it from a CDN — [esm.sh](https://esm.sh) resolves the
+`@openmascot/core` dependency for you:
+
+```html
+<open-mascot character="echo" animation="wave" style="width:240px"></open-mascot>
+<script type="module">
+  import { defineOpenMascot } from 'https://esm.sh/@openmascot/web@0.1.0';
+  import { echo } from 'https://esm.sh/@openmascot/characters@0.1.0/echo';
+  defineOpenMascot({ characters: { echo } });
+</script>
+```
+
+With unpkg or jsDelivr, add an import map for the bare specifiers:
+
+```html
+<script type="importmap">
+  {
+    "imports": {
+      "@openmascot/core": "https://unpkg.com/@openmascot/core@0.1.0/dist/index.js",
+      "@openmascot/web": "https://unpkg.com/@openmascot/web@0.1.0/dist/index.js",
+      "@openmascot/characters/echo": "https://unpkg.com/@openmascot/characters@0.1.0/dist/echo/index.js"
+    }
+  }
+</script>
+<script type="module">
+  import { defineOpenMascot } from '@openmascot/web';
+  import { echo } from '@openmascot/characters/echo';
+  defineOpenMascot({ characters: { echo } });
 </script>
 ```
 

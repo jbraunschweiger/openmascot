@@ -6,12 +6,17 @@ particle effects and a string renderer. **Zero dependencies, no DOM** — runs i
 browsers, Node, workers and React Native.
 
 ```bash
-npm install @openmascot/core   # (0.1.0, not yet published — use the monorepo for now)
+npm install @openmascot/core @openmascot/characters
+# or: pnpm add @openmascot/core @openmascot/characters
+# or: yarn add @openmascot/core @openmascot/characters
 ```
+
+ESM and CommonJS builds with TypeScript types; no dependencies, no DOM types
+required. 20.6 kB min+gzip with every export included.
 
 ```ts
 import { Mascot, renderSvg } from '@openmascot/core';
-import { echo } from '@openmascot/characters';
+import { echo } from '@openmascot/characters/echo';
 
 const m = new Mascot(echo, { seed: 1 });
 m.play('emote-happy');

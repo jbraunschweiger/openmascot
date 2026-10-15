@@ -80,6 +80,22 @@ export interface SpringDef {
   damping: number;
   /** Absolute rest position of the spring's centre of mass. */
   tip: [number, number];
+  /**
+   * Optional `[min, max]` limits (degrees, in the bone's local unmirrored
+   * sense: + = clockwise) for the spring's extra rotation
+   * (`data-om-spring-limit`). Default ±55°.
+   */
+  limit?: [number, number];
+}
+
+/**
+ * A pinned point (`data-om-pin`): the rest point `at` (absolute coordinates)
+ * of the pinned bone's art is glued to wherever bone `bone`'s current world
+ * transform carries that same rest point.
+ */
+export interface PinDef {
+  bone: string;
+  at: [number, number];
 }
 
 /** A node of the compiled rig tree. */
@@ -98,6 +114,34 @@ export interface BoneNode {
   normal: [number, number];
   spring?: SpringDef;
   shadow?: boolean;
+  /**
+   * Depth used only for draw-order sorting among siblings (`data-om-sort-z`),
+   * in place of `z`. Parallax and perspective still use `z`. Lets a big
+   * volume (a head on a body) sort by the surface that actually overlaps its
+   * neighbours instead of by its pivot.
+   */
+  sortZ?: number;
+  /**
+   * `flat` surfaces only (`data-om-flat-min`): minimum |foreshortening| (0..1).
+   * Instead of fading out edge-on, the art keeps this fraction of its width
+   * (a wing or ear seen edge-on still reads as a thin shape) and stays opaque.
+   */
+  flatMin?: number;
+  /**
+   * `feature` surfaces only (`data-om-feature-min`): how narrow the feature
+   * may foreshorten in profile (0..1). Default 0.4; higher keeps snouts and
+   * beaks protruding more when the head turns.
+   */
+  featureMin?: number;
+  /**
+   * Skin constraint (`data-om-pin`): one to three points of this bone's art
+   * pinned to points carried by other bones. One pin rotates + stretches the
+   * bone about its pivot; two pins give the exact affine map of the triangle
+   * (pivot, pin 1, pin 2); three pins give the affine map of the triangle of
+   * pins (the pivot then only follows) — membranes that stay attached to body
+   * and limb.
+   */
+  pin?: PinDef[];
   /** Extra attributes copied from the source `<g>` (minus data-om-*). */
   attrs: Record<string, string>;
   children: RigNode[];
@@ -170,6 +214,12 @@ export interface ParamDriver {
   k?: number;
   /** Piecewise-linear mapping `[[param, channelDelta], …]` (sorted by param). */
   curve?: [number, number][];
+  /**
+   * Drive from a weighted sum of params instead of the owning param alone,
+   * e.g. `{ wingFold: 1, raiseL: -1 }`: raising the left wing also unfolds it.
+   * Values are the resolved (clamped) params; missing params count as 0.
+   */
+  input?: Record<string, number>;
 }
 
 export interface CharacterDef {
@@ -188,6 +238,20 @@ export interface CharacterDef {
   anchors?: Record<string, { bone: string; offset?: [number, number] }>;
   /** Idle behaviour tuning. */
   idle?: IdleConfig;
+  /**
+   * Per-effect default params for this character, merged *under* the params
+   * of every emission (clip events and `emit()`), e.g.
+   * `{ tears: { eyeX: 40, eyeY: -10 } }` so shared clips land on its eyes.
+   */
+  effectParams?: Record<string, Record<string, unknown>>;
+  /**
+   * Param values a clip pose starts from when the clip does not animate that
+   * param (used by the `Mascot` runtime when sampling clips), e.g.
+   * `{ wingFold: 0.5 }`: clips that don't care about wings keep them relaxed
+   * instead of spread. Unlike `ParamDef.default` this does not change the
+   * rest pose (`resolvePose` of an empty pose still renders the drawing).
+   */
+  restParams?: Record<string, number>;
   /** Free-form metadata (author, licence, tags). */
   meta?: Record<string, unknown>;
 }

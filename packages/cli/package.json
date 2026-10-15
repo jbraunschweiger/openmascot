@@ -1,14 +1,58 @@
 {
   "name": "@openmascot/cli",
   "version": "0.1.0",
-  "description": "OpenMascot command line: validate rigs, render frames, and build frame sheets for reviewing animations.",
   "license": "MIT",
+  "author": "Jakob Braunschweiger (https://github.com/jbraunschweiger)",
+  "homepage": "https://jbraunschweiger.github.io/openmascot/",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/jbraunschweiger/openmascot.git",
+    "directory": "packages/cli"
+  },
+  "bugs": {
+    "url": "https://github.com/jbraunschweiger/openmascot/issues"
+  },
+  "description": "OpenMascot command line: validate rigs, lint clips, render frames and build frame sheets (contact sheets) for reviewing animations.",
+  "keywords": [
+    "mascot",
+    "character",
+    "svg",
+    "animation",
+    "rigging",
+    "pseudo-3d",
+    "openmascot",
+    "cli",
+    "frame-sheet",
+    "resvg"
+  ],
   "type": "module",
-  "bin": { "openmascot": "./src/bin.ts" },
-  "scripts": { "build": "tsup src/bin.ts --format esm --clean" },
+  "bin": {
+    "openmascot": "./src/bin.ts"
+  },
+  "publishConfig": {
+    "access": "public",
+    "bin": {
+      "openmascot": "./dist/bin.js"
+    }
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "build": "tsup",
+    "prepack": "tsup",
+    "prepublishOnly": "node ../../scripts/prepublish-guard.mjs"
+  },
   "dependencies": {
-    "@openmascot/core": "workspace:*",
-    "@openmascot/characters": "workspace:*",
     "@resvg/resvg-js": "^2.6.2"
+  },
+  "devDependencies": {
+    "@openmascot/characters": "workspace:*",
+    "@openmascot/core": "workspace:*"
   }
 }

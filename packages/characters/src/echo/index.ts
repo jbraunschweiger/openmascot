@@ -4,7 +4,7 @@
  * Art: ./echo.svg (rig-annotated, see docs/rig-format.md).
  * Animations come from the shared library (../library) plus Echo-only clips.
  */
-import type { CharacterDef } from '@openmascot/core';
+import type { Channel, CharacterDef, ParamDriver } from '@openmascot/core';
 import svg from './art.generated';
 import { library } from '../library';
 import { echoClips } from './clips';
@@ -27,6 +27,45 @@ export const echoExpressions: CharacterDef['expressions'] = {
   sleepy: { 'eye-l': 'closed', 'eye-r': 'closed', mouth: 'default' },
   proud: { 'eye-l': 'happy', 'eye-r': 'happy', mouth: 'grin' },
 };
+
+/** Fold keys per wing bone: [fold, value] (left wing; the right wing mirrors rot/yaw/x). */
+const FOLD: Record<string, Partial<Record<'rot' | 'yaw' | 'sx' | 'sy' | 'x' | 'y' | 'dz', [number, number][]>>> = {
+  'wing-l': {
+    rot: [[0, 0], [0.5, -10], [1, -2]],
+    yaw: [[0, 0], [0.5, -14], [1, -40]],
+    sx: [[0, 0], [0.5, -0.14], [1, -0.67]],
+    sy: [[0, 0], [0.5, -0.14], [1, -0.67]],
+  },
+  'wing-hand-l': {
+    rot: [[0, 0], [0.5, 2], [1, 2]],
+    sx: [[0, 0], [0.5, 0.02], [1, 0.75]],
+    sy: [[0, 0], [0.5, 0.12], [1, 1.4]],
+  },
+  'wing-tip-l': {
+    rot: [[0, 0], [0.5, -24], [1, -15]],
+  },
+};
+
+/**
+ * Each wing's fold is driven by `wingFold − raise<side>`, so raising a wing
+ * also opens it (the curves hold their end values outside 0..1).
+ */
+function wingFoldDrives(): ParamDriver[] {
+  const out: ParamDriver[] = [];
+  for (const [bone, chans] of Object.entries(FOLD)) {
+    for (const [channel, curve] of Object.entries(chans) as [Channel, [number, number][]][]) {
+      out.push({ bone, channel, curve, input: { wingFold: 1, raiseL: -1 } });
+      const flip = channel === 'rot' || channel === 'yaw' || channel === 'x';
+      out.push({
+        bone: bone.replace(/-l$/, '-r'),
+        channel,
+        curve: flip ? curve.map(([a, b]) => [a, -b] as [number, number]) : curve,
+        input: { wingFold: 1, raiseR: -1 },
+      });
+    }
+  }
+  return out;
+}
 
 export const echo: CharacterDef = {
   id: 'echo',
@@ -97,6 +136,28 @@ export const echo: CharacterDef = {
         { bone: 'wing-r', channel: 'sx', curve: [[-1, -0.28], [0, 0], [1, -0.08]] },
       ],
     },
+    /**
+     * Wing fold: 0 = fully spread (as drawn), ~0.45 = relaxed (resting, wings
+     * half-tucked against the flanks), 1 = folded tight like a cloak. Driven
+     * entirely by the wing bone chain (arm → hand → tip) — no art swap.
+     */
+    wingFold: {
+      min: 0,
+      max: 1,
+      drives: wingFoldDrives(),
+    },
+    /** Raise (and open) the screen-left wing only: 1 ≈ wing up beside the head, 1.5 = overhead. */
+    raiseL: {
+      min: -1,
+      max: 1.5,
+      drives: [{ bone: 'wing-l', channel: 'rot', curve: [[-1, -20], [0, 0], [1, 50], [1.5, 80]] }],
+    },
+    /** Raise (and open) the screen-right wing only (mirror of `raiseL`). */
+    raiseR: {
+      min: -1,
+      max: 1.5,
+      drives: [{ bone: 'wing-r', channel: 'rot', curve: [[-1, 20], [0, 0], [1, -50], [1.5, -80]] }],
+    },
     /** Lean the whole body (-1..1 → ±12°). */
     lean: {
       min: -1.5,
@@ -105,6 +166,8 @@ export const echo: CharacterDef = {
     },
   },
   clips: { ...library, ...echoClips },
+  // Clips that don't animate the wings keep them relaxed, not spread.
+  restParams: { wingFold: 0.5 },
   anchors: {
     head: { bone: 'head', offset: [0, -10] },
     mouth: { bone: 'mouth' },

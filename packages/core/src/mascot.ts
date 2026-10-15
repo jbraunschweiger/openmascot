@@ -412,7 +412,7 @@ export class Mascot {
     const seed = Math.floor(this.random() * 2 ** 31);
     const specs = def.spawn({
       random: rng(seed),
-      params: ev.params ?? {},
+      params: { ...this.character.effectParams?.[ev.effect], ...ev.params },
       scale: this.opts.effectScale ?? 1,
       angle,
     });
@@ -447,9 +447,17 @@ export class Mascot {
       if (t.loop && !t.ended) u = ((u % dur) + dur) % dur;
       else u = Math.min(u, dur);
       const p = sampleClip(t.clip, u, t.ctx);
+      this.fillRestParams(p);
       pose = pose ? blendPoses(pose, p, t.weight) : p;
     }
-    return pose ?? emptyPose();
+    return pose ?? this.fillRestParams(emptyPose());
+  }
+
+  /** Params a clip doesn't animate start from the character's `restParams`. */
+  private fillRestParams(p: Pose): Pose {
+    const rest = this.character.restParams;
+    if (rest) for (const k in rest) if (p.params[k] === undefined) p.params[k] = rest[k];
+    return p;
   }
 
   private evaluate(dt: number): MascotFrame {
@@ -646,12 +654,38 @@ export class Mascot {
       const ry = ty - py;
       const qx = s.qx - px;
       const qy = s.qy - py;
-      let a = (Math.atan2(rx * qy - ry * qx, rx * qx + ry * qy) * 180) / Math.PI;
-      // keep the simulated tip near the rigid length (avoid drift)
-      a = clamp(a, -55, 55);
+      const a = (Math.atan2(rx * qy - ry * qx, rx * qx + ry * qy) * 180) / Math.PI;
       // world angle → local: divide out mirroring
       const det = m[0] * m[3] - m[1] * m[2];
-      s.angle = det < 0 ? -a : a;
+      const sign = det < 0 ? -1 : 1;
+      // Per-bone limits (data-om-spring-limit), default ±55°, in local degrees.
+      const [lo, hi] = s.bone.spring!.limit ?? [-55, 55];
+      const local = sign * a;
+      const lim = clamp(local, lo, hi);
+      if (lim !== local) {
+        // Hit a limit: put the simulated tip back on the limit and drop the
+        // velocity that pushes past it, so the spring rests against the stop
+        // instead of winding up beyond it.
+        const back = ((sign * lim - a) * Math.PI) / 180;
+        const cb = Math.cos(back);
+        const sb = Math.sin(back);
+        s.qx = px + qx * cb - qy * sb;
+        s.qy = py + qx * sb + qy * cb;
+        const vrx = s.vx - tvx;
+        const vry = s.vy - tvy;
+        // tangential direction of increasing angle (world, clockwise in SVG)
+        const len = Math.hypot(qx, qy) || 1;
+        const txn = -qy / len;
+        const tyn = qx / len;
+        const vt = vrx * txn + vry * tyn;
+        // the outward sense: (local beyond hi) ⇒ positive world angle × sign
+        const out = (local > hi ? 1 : -1) * sign;
+        if (vt * out > 0) {
+          s.vx -= vt * txn;
+          s.vy -= vt * tyn;
+        }
+      }
+      s.angle = lim;
     }
   }
 }
