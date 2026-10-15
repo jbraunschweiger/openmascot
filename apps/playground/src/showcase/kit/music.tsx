@@ -49,9 +49,9 @@ export interface FretDot {
 
 /** Horizontal fretboard close-up as seen through the camera. */
 export function Fretboard({ dots, className, onClick }: { dots: FretDot[]; className?: string; onClick?: () => void }) {
-  const sy = (s: number) => 12 + s * 17;
+  const sy = (s: number) => 14 + s * 22.4;
   return (
-    <svg viewBox="0 0 200 110" className={'sc-fretboard' + (className ? ' ' + className : '')} onClick={onClick} aria-hidden>
+    <svg viewBox="0 0 200 140" className={'sc-fretboard' + (className ? ' ' + className : '')} onClick={onClick} aria-hidden>
       <defs>
         <linearGradient id="sc-wood" x1="0" y1="0" x2="0" y2="1">
           <stop offset="0" stopColor="#7d6b78" />
@@ -61,12 +61,12 @@ export function Fretboard({ dots, className, onClick }: { dots: FretDot[]; class
           <feGaussianBlur stdDeviation="2.4" />
         </filter>
       </defs>
-      <rect width="200" height="110" fill="url(#sc-wood)" />
+      <rect width="200" height="140" fill="url(#sc-wood)" />
       {[0, 1, 2, 3, 4, 5].map((s) => (
-        <rect key={s} x="0" y={sy(s) - 4} width="200" height="8" fill="#000" opacity=".05" />
+        <rect key={s} x="0" y={sy(s) - 5} width="200" height="10" fill="#000" opacity=".05" />
       ))}
       {[22, 64, 106, 148, 190].map((x) => (
-        <rect key={x} x={x} y="0" width="2.6" height="110" fill="#d8d2d6" opacity=".85" />
+        <rect key={x} x={x} y="0" width="2.6" height="140" fill="#d8d2d6" opacity=".85" />
       ))}
       {[0, 1, 2, 3, 4, 5].map((s) => (
         <rect key={s} x="0" y={sy(s) - 0.4 - s * 0.12} width="200" height={0.9 + s * 0.25} fill="#efe9ee" opacity=".9" />
@@ -77,7 +77,7 @@ export function Fretboard({ dots, className, onClick }: { dots: FretDot[]; class
         return (
           <g key={i} className={`sc-fdot sc-fdot--${d.state}`} style={{ animationDelay: `${i * 0.12}s` }}>
             {d.state === 'hit' && <circle cx={cx} cy={cy} r="9" className="sc-fdot-glow" filter="url(#sc-glow)" />}
-            <circle cx={cx} cy={cy} r="6.4" className="sc-fdot-c" />
+            <circle cx={cx} cy={cy} r="7.4" className="sc-fdot-c" />
             {d.state === 'target' && <circle cx={cx} cy={cy} r="2.6" fill="#fff" />}
           </g>
         );
@@ -91,12 +91,20 @@ export function NeckView({ plucked, onPluck }: { plucked: boolean; onPluck?: () 
   const strings = [34, 44, 54, 64, 74, 84];
   return (
     <svg viewBox="0 0 120 130" className={'sc-neck' + (plucked ? ' is-plucked' : '')} onClick={onPluck} role="button" aria-label="Pluck the high E string">
+      <defs>
+        <linearGradient id="sc-neckshade" x1="0" x2="1">
+          <stop offset="0" stopColor="#000" stopOpacity=".18" />
+          <stop offset=".5" stopColor="#000" stopOpacity="0" />
+          <stop offset="1" stopColor="#000" stopOpacity=".18" />
+        </linearGradient>
+      </defs>
       <rect x="2" y="2" width="116" height="126" rx="12" fill="#efeaf6" />
       <rect x="2" y="40" width="20" height="44" rx="6" fill="#f6c95b" opacity=".9" />
       <rect x="98" y="40" width="20" height="44" rx="6" fill="#f6c95b" opacity=".9" />
-      <rect x="26" y="10" width="68" height="118" fill="#3b3140" />
+      <rect x="26" y="10" width="68" height="118" fill="#5a4a5e" />
+      <rect x="26" y="10" width="68" height="118" fill="url(#sc-neckshade)" />
       {[10, 34, 58, 82, 106].map((y) => (
-        <rect key={y} x="26" y={y} width="68" height="2.4" fill="#d6cfd8" />
+        <rect key={y} x="26" y={y} width="68" height="1.8" fill="#cfc4cf" />
       ))}
       {strings.map((x, i) => (
         <rect key={x} x={x - 0.6} y="10" width={1.2 + (5 - i) * 0.12} height="118" fill="#eee6ee" opacity=".9" className={i === 5 ? 'sc-neck-e' : ''} />

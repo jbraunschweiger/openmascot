@@ -29,6 +29,8 @@ export interface MascotOptions {
   alive?: boolean;
   /** Clip to start with. Default: the character's idle clip. */
   initial?: string;
+  /** Play options for the initial clip (e.g. `{ then: null, bpm: 100 }`). */
+  initialOptions?: PlayOptions;
   /** Solver tuning. */
   solve?: SolveOptions;
   /** Effect size multiplier. Default 1. */
@@ -152,7 +154,7 @@ export class Mascot {
       }
     }
     const initial = opts.initial ?? this.idleClip;
-    if (this.clips[initial]) this.play(initial, { fade: 0 });
+    if (this.clips[initial]) this.play(initial, { ...opts.initialOptions, fade: 0 });
     this.current = this.evaluate(0);
   }
 
@@ -221,6 +223,40 @@ export class Mascot {
     return new Promise<void>((res) => {
       track.resolve = res;
     });
+  }
+
+  /** Turn autonomous life (blinks, glances, fidgets, breathing) on or off. */
+  setAlive(on: boolean) {
+    this.alive = on;
+  }
+
+  get isAlive(): boolean {
+    return this.alive;
+  }
+
+  /** Playback position of the dominant clip. */
+  progress(): { clip: string; time: number; duration: number; loop: boolean } | undefined {
+    const t = [...this.tracks].reverse().find((x) => x.target > 0) ?? this.tracks[this.tracks.length - 1];
+    if (!t) return undefined;
+    const duration = t.clip.duration * t.spu;
+    const time = t.loop && !t.ended ? t.elapsed % duration : Math.min(t.elapsed, duration);
+    return { clip: t.name, time, duration, loop: t.loop };
+  }
+
+  /** Change the tempo of the playing beat clip without restarting it (phase is preserved). */
+  setTempo(bpm: number) {
+    for (const t of this.tracks) {
+      if (t.clip.units !== 'beats' || t.target <= 0) continue;
+      const spu = 60 / bpm;
+      t.elapsed *= spu / t.spu;
+      t.spu = spu;
+      t.ctx.secondsPerUnit = spu;
+    }
+  }
+
+  /** Change the playback speed of the playing clip. */
+  setSpeed(speed: number) {
+    for (const t of this.tracks) if (t.target > 0) t.speed = speed;
   }
 
   /** Return to the idle clip. */

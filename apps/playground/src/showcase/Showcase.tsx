@@ -177,7 +177,7 @@ function Overview({ renderPhone }: { renderPhone: (s: FlowScreen, i: number) => 
                             <IconArrowRight />
                           </span>
                         )}
-                        <figure className="sc-slot" style={{ flexGrow: screen.aspect }}>
+                        <figure className="sc-slot">
                           {renderPhone(FLOW[i], i)}
                           {!screen.hideCaption && <figcaption>{screen.caption}</figcaption>}
                         </figure>

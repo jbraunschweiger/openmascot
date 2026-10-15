@@ -15,12 +15,13 @@ import {
   useRef,
   useState,
   type CSSProperties,
+  type HTMLAttributes,
   type ForwardedRef,
 } from 'react';
 import type { CharacterDef, Mascot as MascotRuntime, MascotEvent, MascotOptions, PlayOptions } from '@openmascot/core';
 import { MascotPlayer } from '@openmascot/web';
 
-export interface MascotProps {
+export interface MascotProps extends Omit<HTMLAttributes<HTMLDivElement>, 'children' | 'onEvent'> {
   character: CharacterDef;
   /**
    * Clip to play. Changing it crossfades. Loops follow the clip's loop flag;
@@ -77,6 +78,7 @@ function MascotImpl(props: MascotProps, ref: ForwardedRef<MascotHandle>) {
     const p = new MascotPlayer(el, props.character, {
       ...props.options,
       initial: props.animation,
+      initialOptions: { then: props.holdLastFrame ? null : undefined, bpm: props.bpm },
       padding: props.padding,
       lookAtPointer: props.lookAtPointer,
       speed: props.speed,
@@ -146,7 +148,11 @@ function MascotImpl(props: MascotProps, ref: ForwardedRef<MascotHandle>) {
     [],
   );
 
-  return <div ref={host} className={props.className} style={{ display: 'inline-block', lineHeight: 0, ...props.style }} />;
+  const {
+    character: _c, animation: _a, animationKey: _k, expression: _e, bpm: _b, speed: _s, fade: _f, holdLastFrame: _h,
+    lookAtPointer: _l, look: _lk, paused: _p, padding: _pd, options: _o, onEvent: _oe, title: _t, style, ...rest
+  } = props;
+  return <div ref={host} {...rest} style={{ display: 'inline-block', lineHeight: 0, ...style }} />;
 }
 
 export const Mascot = forwardRef(MascotImpl);

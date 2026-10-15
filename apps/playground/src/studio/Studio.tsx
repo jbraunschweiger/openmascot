@@ -44,9 +44,23 @@ type PoseKey = (typeof POSE_KEYS)[number];
 const EASES = ['linear', 'step', 'sineIn', 'sineOut', 'sineInOut', 'quadIn', 'quadOut', 'quadInOut', 'cubicIn', 'cubicOut', 'cubicInOut', 'backIn', 'backOut', 'backInOut', 'elasticOut', 'bounceOut'];
 const CHANNELS = 'x y rot sx sy yaw pitch dz opacity';
 
+/** Pretty JSON that keeps keyframes / short objects on one line (diff- and AI-friendly). */
 function clipJson(clip: Clip): string {
+  const objLike = (x: unknown) => !!x && typeof x === 'object' && !Array.isArray(x);
+  const pj = (v: unknown, ind: string): string => {
+    if (typeof v !== 'object' || v === null) return JSON.stringify(v) ?? 'null';
+    const flat = JSON.stringify(v);
+    if (Array.isArray(v)) {
+      if (!v.some(objLike) && flat.length + ind.length <= 100) return `[${v.map((x) => pj(x, '')).join(', ')}]`;
+      return `[\n${v.map((x) => `${ind}  ${pj(x, `${ind}  `)}`).join(',\n')}\n${ind}]`;
+    }
+    const entries = Object.entries(v as Record<string, unknown>).filter(([, x]) => x !== undefined && typeof x !== 'function');
+    if (!entries.length) return '{}';
+    if (!entries.some(([, x]) => objLike(x)) && flat.length + ind.length <= 84) return `{ ${entries.map(([k, x]) => `${JSON.stringify(k)}: ${pj(x, '')}`).join(', ')} }`;
+    return `{\n${entries.map(([k, x]) => `${ind}  ${JSON.stringify(k)}: ${pj(x, `${ind}  `)}`).join(',\n')}\n${ind}}`;
+  };
   const { fn: _fn, ...rest } = clip;
-  return JSON.stringify(rest, (_k, v) => (Array.isArray(v) && v.every((x) => typeof x !== 'object' || x === null) ? `__INLINE__${JSON.stringify(v)}` : v), 2).replace(/"__INLINE__(.*?)"(,?)$/gm, (_m, a: string, c: string) => a.replace(/\\"/g, '"') + c);
+  return pj(rest, '');
 }
 
 const STARTER: Clip = {
@@ -138,6 +152,7 @@ export function Studio() {
 
   const bpmEff = isBeats(current.clip) ? bpm : undefined;
   const total = seconds(current.clip, bpmEff);
+  const tickCount = Math.min(40, Math.max(2, Math.round(isBeats(current.clip) ? current.clip.duration : total * 4)));
 
   /* ---------------------------------------------------------------- */
   /* playback                                                          */
@@ -324,9 +339,7 @@ export function Studio() {
 
   const setAlive = (v: boolean) => {
     setAliveState(v);
-    // The runtime has no public setter for this yet (read at construction).
-    const r = runtime() as unknown as { alive: boolean } | undefined;
-    if (r) r.alive = v;
+    runtime()?.setAlive(v);
   };
 
   const setParam = (name: string, v: number | null) => {
@@ -431,7 +444,7 @@ export function Studio() {
       clips: () => Object.keys(allClips()),
       play: (name: string) => selectClip(name),
       playJson: (clip: Clip | string) => {
-        const text = typeof clip === 'string' ? clip : JSON.stringify(clip);
+        const text = typeof clip === 'string' ? clip : clipJson(clip);
         setEditor(text);
         const v = validate(text);
         setProblems(v.problems);
@@ -592,8 +605,8 @@ export function Studio() {
             </div>
             <div className="st-timeline">
               <div className="st-ticks">
-                {Array.from({ length: Math.min(40, Math.max(2, Math.round(isBeats(current.clip) ? current.clip.duration : total * 4))) + 1 }, (_, i, a) => (
-                  <span key={i} style={{ left: `${(i / (a.length - 1)) * 100}%` }} className={isBeats(current.clip) || i % 4 === 0 ? 'major' : ''} />
+                {Array.from({ length: tickCount + 1 }, (_, i) => (
+                  <span key={i} style={{ left: `${(i / tickCount) * 100}%` }} className={isBeats(current.clip) || i % 4 === 0 ? 'major' : ''} />
                 ))}
                 {(current.clip.events ?? []).map((ev, i) => (
                   <span key={`e${i}`} className="st-evmark" style={{ left: `${(ev.t / current.clip.duration) * 100}%` }} title={`${ev.effect} @ ${ev.t}`} />
@@ -601,7 +614,7 @@ export function Studio() {
               </div>
               <input
                 type="range"
-                className="st-scrubber"
+                className={`st-scrubber ${scrub == null ? 'live' : ''}`}
                 min={0}
                 max={total}
                 step={1 / SIM_FPS}
@@ -688,6 +701,7 @@ export function Studio() {
             >
               <textarea
                 className="st-json"
+                wrap="off"
                 spellCheck={false}
                 value={editor}
                 onChange={(e) => setEditor(e.target.value)}

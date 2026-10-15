@@ -11,7 +11,7 @@ describe('defineClip / defineClips', () => {
   it('are identity helpers; defineClips fills in names', () => {
     const c: Clip = { duration: 1 };
     expect(defineClip(c)).toBe(c);
-    const lib = defineClips({ a: { duration: 1 }, b: { name: 'custom', duration: 2 } });
+    const lib = defineClips<Record<string, Clip>>({ a: { duration: 1 }, b: { name: 'custom', duration: 2 } });
     expect(lib.a.name).toBe('a');
     expect(lib.b.name).toBe('custom');
   });

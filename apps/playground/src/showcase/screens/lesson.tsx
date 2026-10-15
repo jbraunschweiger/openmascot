@@ -50,7 +50,7 @@ export function Detecting() {
     <div className="sc-col sc-fb">
       <Title>Play the G chord</Title>
       <div className="sc-fb-hero">
-        <Echo api={e} anim={['listen', 'idle']} w={120} className="sc-fb-echo sc-fb-echo--edge" />
+        <Echo api={e} anim={['listen', 'idle']} w={150} className="sc-fb-echo sc-fb-echo--edge" />
         <div className="sc-minichord">
           <b>G</b>
           <ChordDiagram chord="G" ok={done} />
@@ -73,7 +73,7 @@ export function SuccessFeedback() {
     <div className="sc-col sc-fb">
       <Title>Play the G chord</Title>
       <div className="sc-fb-hero">
-        <Echo api={e} w={118} className="sc-fb-echo" onClick={cheer} />
+        <Echo api={e} w={140} className="sc-fb-echo" onClick={cheer} />
         <div className="sc-minichord">
           <b>G</b>
           <ChordDiagram chord="G" ok />
@@ -103,7 +103,7 @@ export function NextPrompt() {
     <div className="sc-col sc-fb">
       <Title>Now try C</Title>
       <div className="sc-fb-hero">
-        <Echo api={e} w={124} className="sc-fb-echo sc-fb-echo--edge" />
+        <Echo api={e} w={156} className="sc-fb-echo sc-fb-echo--edge" />
         <div className="sc-minichord sc-minichord--plain">
           <b>C</b>
           <ChordDiagram chord="C" ok={hit} />
@@ -143,7 +143,7 @@ export function LessonProgress() {
         <div className="sc-switch-chords">
           G <IconArrowRight /> C
         </div>
-        <Echo api={e} anim={['fly', 'idle']} w={150} onClick={cheer} />
+        <Echo api={e} anim={['fly', 'idle']} w={200} onClick={cheer} />
       </Card>
       <div className="sc-getting">{steps >= 3 ? 'Chord switch done!' : 'You’re getting it!'}</div>
       <button
@@ -171,7 +171,10 @@ export function LessonProgress() {
 export function LessonComplete() {
   const { next, go } = usePhone();
   const e = useEcho('idle');
-  const celebrate = () => e.react(['emote-celebrate', 'dance-party', 'jump'], { fx: 'confetti', fxDelay: 200, expr: 'joyful' });
+  const celebrate = () => {
+    e.react(['emote-celebrate', 'dance-party', 'jump'], { fx: 'confetti', fxDelay: 200, expr: 'joyful' });
+    setTimeout(() => e.emit(['xp', 'stars']), 1000);
+  };
   useWhenVisible(celebrate, { delay: 600, every: 10000 });
   return (
     <div className="sc-col sc-complete">

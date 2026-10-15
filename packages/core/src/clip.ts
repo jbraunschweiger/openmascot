@@ -16,6 +16,20 @@ export function clipSeconds(clip: Clip, bpmOverride?: number): number {
   return clip.duration * secondsPerUnit(clip, bpmOverride);
 }
 
+const warned = new Set<string>();
+function safeEase(e: Keyframe[2]): (t: number) => number {
+  try {
+    return resolveEase(e);
+  } catch (err) {
+    const key = String(e);
+    if (!warned.has(key)) {
+      warned.add(key);
+      console.warn(`[openmascot] ${(err as Error).message}; using linear`);
+    }
+    return (t) => t;
+  }
+}
+
 /** Sample a keyframe track at time `t` (same units as the keys). */
 export function sampleTrack(keys: Keyframe[], t: number): number {
   const n = keys.length;
@@ -34,7 +48,7 @@ export function sampleTrack(keys: Keyframe[], t: number): number {
   const k1 = keys[hi];
   const span = k1[0] - k0[0];
   if (span <= 0) return k1[1];
-  const u = resolveEase(k0[2])((t - k0[0]) / span);
+  const u = safeEase(k0[2])((t - k0[0]) / span);
   return k0[1] + (k1[1] - k0[1]) * u;
 }
 

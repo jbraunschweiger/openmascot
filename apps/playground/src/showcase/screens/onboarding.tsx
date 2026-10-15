@@ -21,7 +21,7 @@ export function Welcome() {
         <IconEighth className="sc-float sc-float--3" />
       </div>
       <div className="sc-welcome-logo">Echo</div>
-      <Echo api={e} anim={['fly', 'idle']} w={230} className="sc-welcome-echo" onClick={() => e.react(['emote-playful', 'emote-happy'], { fx: 'notes', expr: 'playful' })} />
+      <Echo api={e} anim={['fly', 'idle']} w={330} className="sc-welcome-echo" onClick={() => e.react(['emote-playful', 'emote-happy'], { fx: 'notes', expr: 'playful' })} />
       <div className="sc-welcome-copy">
         <div className="sc-welcome-hey">
           Hey!
@@ -98,7 +98,7 @@ export function ChooseInstrument() {
       </div>
       <div className="sc-instrument-echo">
         {toast && <div className="sc-toast">{toast}</div>}
-        <Echo api={e} anim={['peek', 'idle']} w={110} />
+        <Echo api={e} anim={['peek', 'idle']} w={124} />
       </div>
       <Spacer />
       <Btn
@@ -115,7 +115,7 @@ export function ChooseInstrument() {
 
 /* 3. Experience level ---------------------------------------------------- */
 const LEVELS = [
-  { title: 'Brand new', sub: 'Never played before', Icon: IconNote, clip: ['encourage', 'emote-love'], fx: 'hearts', expr: 'love' },
+  { title: 'Brand new', sub: 'Never played before', Icon: IconNote, clip: ['encourage', 'emote-love'], fx: ['heart-burst', 'hearts'], expr: 'love' },
   { title: 'Know a few chords', sub: 'A little experience', Icon: IconFingers, clip: ['nod-yes', 'emote-happy'], fx: 'sparkles', expr: 'happy' },
   { title: 'Play a little', sub: 'Comfortable with basics', Icon: IconTuningFork, clip: ['emote-happy', 'nod-yes'], fx: 'notes', expr: 'joyful' },
   { title: 'Already play', sub: 'Looking to improve', Icon: IconNodes, clip: ['emote-excited', 'emote-surprised'], fx: 'exclaim', expr: 'excited' },
@@ -149,7 +149,7 @@ export function ExperienceLevel() {
         ))}
       </div>
       <Spacer />
-      <Echo api={e} w={96} className="sc-level-echo" />
+      <Echo api={e} w={120} className="sc-level-echo" />
       <Btn
         onClick={() => {
           e.react(['nod-yes', 'encourage'], { fx: 'sparkles' });
@@ -182,7 +182,7 @@ export function MicSetup() {
   return (
     <div className="sc-col">
       <Title>Let’s set up your mic</Title>
-      <Echo api={e} anim={['listen', 'idle']} w={170} className="sc-mic-echo" />
+      <Echo api={e} anim={['listen', 'idle']} w={220} className="sc-mic-echo" />
       <p className="sc-body">I need to hear your guitar!</p>
       <Waveform active={detected ? 0.45 : 0.12} className="sc-mic-wave" />
       <button type="button" className="sc-select" onClick={() => setMic((m) => (m + 1) % mics.length)}>
@@ -219,7 +219,7 @@ export function FirstNote() {
   };
   return (
     <div className="sc-col sc-firstnote">
-      <Echo api={e} anim={['hang', 'idle']} w={84} padding={30} className="sc-firstnote-echo" />
+      <Echo api={e} anim={['hang', 'idle']} w={72} padding={30} className="sc-firstnote-echo" />
       <Title>Play your first note</Title>
       <div className={'sc-notebadge' + (heard ? ' is-ok' : '')}>E</div>
       <NeckView plucked={heard} onPluck={pluck} />
@@ -247,13 +247,16 @@ export function FirstNote() {
 export function FirstSuccess() {
   const { next } = usePhone();
   const e = useEcho('idle');
-  const cheer = () => e.react(['emote-celebrate', 'emote-proud', 'jump'], { fx: 'confetti', fxDelay: 150, expr: 'joyful' });
+  const cheer = () => {
+    e.react(['emote-celebrate', 'emote-proud', 'jump'], { fx: 'confetti', fxDelay: 150, expr: 'joyful' });
+    setTimeout(() => e.emit(['xp', 'stars']), 900);
+  };
   useWhenVisible(cheer, { delay: 700, every: 9000 });
   return (
     <div className="sc-col sc-success">
       <ConfettiDecor seed={3} />
       <div className="sc-dark-title">You did it!</div>
-      <Echo api={e} w={190} expression="joyful" className="sc-success-echo" onClick={cheer} />
+      <Echo api={e} w={240} expression="joyful" className="sc-success-echo" onClick={cheer} />
       <div className="sc-success-line">
         That’s a <span className="sc-gold">perfect E!</span>
       </div>

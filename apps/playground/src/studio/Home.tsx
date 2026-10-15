@@ -8,7 +8,7 @@ import { allClips, copyText, DEMO_OPTIONS, echo, hasClip, isBeats } from './shar
 import { Code, useInterval } from './ui';
 import './studio.css';
 
-const HERO_PAD: [number, number, number, number] = [110, 40, 30, 40];
+const HERO_PAD: [number, number, number, number] = [90, 20, 40, 20];
 const MINI_PAD = 46;
 const CARD_PAD = 30;
 
@@ -54,7 +54,10 @@ function Hero() {
           <h1 className="hm-h1">
             Rig any SVG.
             <br />
-            <em>Animate it like a pro.</em>
+            <em>
+              Animate it <br className="hm-br" />
+              like a pro.
+            </em>
           </h1>
           <p className="hm-lede">
             OpenMascot turns a plain, annotated SVG into a living brand mascot — pseudo-3D turns, expressive faces, beat-synced dances, springy ears and particle effects — in a tiny, DOM-free engine

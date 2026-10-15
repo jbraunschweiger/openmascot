@@ -107,7 +107,7 @@ export function useInterval(fn: () => void, ms: number | null) {
 }
 
 /** True once the element has been near the viewport (lazy mount for heavy tiles). */
-export function useNearViewport<T extends Element>(margin = '200px') {
+export function useNearViewport<T extends Element>(margin = '600px') {
   const ref = useRef<T>(null);
   const [near, setNear] = useState(false);
   useEffect(() => {
