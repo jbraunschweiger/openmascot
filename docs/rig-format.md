@@ -146,8 +146,10 @@ folds **by bone motion**, driven by the portable `wingFold` param (0 spread,
 body
  ├─ wing-root-l      anchor on the flank at the wing's depth (no art)
  └─ wing-l           arm: shoulder → wrist, the light leading-edge rim (flat, spring)
-     ├─ wing-flank-l   skin pinned to wing-root-l + wing-l + wing-hand-l (data-om-pin, 3 pins)
-     ├─ wing-web-l     skin pinned to wing-l + wing-hand-l (2 pins, pivot at the shoulder)
+     ├─ wing-flank-l   skin below elbow→finger tip, down to the inner scallop: pinned to
+     │                 wing-l (elbow) + wing-root-l (hip) + wing-hand-l (finger tip)
+     ├─ wing-web-l     skin between forearm and finger 5: pinned to wing-l (elbow, wrist)
+     │                 + wing-hand-l (finger tip)
      └─ wing-hand-l    wrist pivot: finger-5 membrane wedge
          └─ wing-tip-l   wrist pivot: leading finger + outer membrane
 ```
@@ -158,7 +160,12 @@ pieces share edges between the same pinned points and never tear. Folding
 shortens/turns the arm (scale + a little `yaw` so the folded wing faces
 sideways and reads in profile), swings the fingers down and closes the tip
 over the hand like a fan; the pinned skins follow, and the flank skin keeps
-the membrane's lower edge on the body at every angle. The generator
+the membrane's lower edge on the body at every angle. The flank's third pin
+is the **elbow**, not a body point: its apex travels with the wing, so the
+inner trailing edge (finger tip → hip) keeps the soft concave scallop of the
+drawing whether the wing rises, flaps or folds — a body-fixed apex lets the
+affine map flatten it into a straight, pointed "sail" edge. Cut skins so the
+edge you care about sits far from the line between two of the pins. The generator
 (`packages/characters/scripts/echo-src.py`) shows the cutting; the drivers
 are in `packages/characters/src/echo/index.ts`.
 
