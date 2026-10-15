@@ -55,7 +55,7 @@ Helpers (from `@openmascot/core`):
 * `keys(ease, [t, v], [t, v, easeOverride], …)`
 * `cycle(duration, [v0, v1, v2, …], ease?)` — evenly spaced looping keys that return to `v0`
 * `wave(duration, amplitude, { cycles, phase, offset })` — sampled sine
-* `mirrorClip(clip)` — swaps `-l`/`-r` and negates x / rot / yaw / `*X` params
+* `mirrorClip(clip)` — swaps `-l`/`-r` and negates x / rot / yaw / `*X` params / `lean`
 * `sequence(name, [clipA, clipB, …])` — concatenate moves into a routine
 
 ### Channels (per bone)
@@ -86,7 +86,7 @@ params work across characters. Echo implements:
 | `breathe` | −1..1 | breathing (runtime drives this) |
 | `squash` | −1..1 | + squash down / − stretch up, anchored at the feet |
 | `flap` | −1.5..1.5 | wings: +1 both up, −1 both down/forward |
-| `lean` | −1..1 | lean whole body ±12° |
+| `lean` | −1.5..1.5 | lean whole body (±1 → ±12°) |
 
 Prefer params for "what" (look, flap, squash) and bone channels for "where"
 (root travel, head tilt, spins).

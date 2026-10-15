@@ -79,7 +79,7 @@ is distorted:
 | `back` | Like `face`, but only visible from **behind** (normal + 180°). | back markings, wing-joint details |
 | `feature` | Foreshortened like `face` but **never culled**; sorted by depth so the parent's art occludes it once it turns away. Sticks out in profile. | snouts, beaks, noses, horns |
 
-With just these four rules a front-view drawing can spin 360°, look around,
+With just these five surface types a front-view drawing can spin 360°, look around,
 and nod convincingly — the classic flat-vector "2.5D" trick.
 
 ## Slots & variants — swappable art
@@ -130,5 +130,5 @@ they make sense (`-l` / `-r` = **screen** left / right):
 ## Validation
 
 `pnpm openmascot validate path/to/character.svg` checks the annotations
-(duplicate bone names outside slots, missing pivots, inconsistent layer order,
+(duplicate bone names outside slots, unannotated groups around bones, inconsistent layer order,
 unknown surfaces…) and prints the bone tree.
