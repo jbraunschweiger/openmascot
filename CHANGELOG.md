@@ -94,7 +94,8 @@ First public version.
 
 - Echo: the chest/body no longer pops over the chin when the body pitches
   or yaws (head and belly sort by `data-om-sort-z`), the membrane's lower
-  edge stays on the flank in every wing pose, the spin no longer shows an
+  edge stays on the flank in every wing pose and meets the hip with a soft
+  concave scallop (never a straight, pointed sail edge), the spin no longer shows an
   X of membranes from behind or ghostly edge-on wings/ears, and the tuft
   and ears can't swing their base out of the head (limits + tucked roots).
 - Children of foreshortened (`flat`/`face`/`feature`) bones were

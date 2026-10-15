@@ -559,7 +559,8 @@ WS = (-63, -98)          # shoulder (wing-l pivot)
 WW = (-137, -165)        # wrist (hand/tip pivot), centre of the rim band at the peak
 WP2 = (-117.5, -39)      # tip of finger 5 (point between the two scallops)
 WM = (-166, -77.5)       # trailing-edge point where the fan splits (finger 4)
-WB = (-48, -36)          # membrane meets the flank (pinned to the body)
+WB = (-48, -36)          # membrane meets the flank at hip height (pinned to the body)
+WE = (-98, -112)         # elbow on the arm: seam between web and flank skins, apex of the flank
 CAP_R = 8.6              # rim joint cap at the wrist
 
 
@@ -648,8 +649,21 @@ def wing_pieces():
     arm = [(up, WW, False), (WW, far(WP2), False)]               # up ... finger 5 (arm side)
     # arm-side membrane splits along S->P2 into the web (above) and flank (below);
     # both tuck under the rim (cut along S->W) and the flank under the body (S->B)
-    web = arm + [(WS, WW, False), (WS, WP2, True)]
-    flank = arm + [(WS, WP2, False), (toward(WS, WB, -0.2), toward(WB, WS, -2), False)]
+    # keep the membrane side of S->B (the inner scallop); the part beyond it
+    # is inside the body anyway
+    flank = arm + [(WS, WP2, False), (toward(WS, WB, -0.2), toward(WB, WS, -2), True)]
+    # Arm-side membrane splits along E->P2 (elbow to finger tip) into the web
+    # (E, W, P2: between forearm and finger 5) and the flank (everything below:
+    # down to the inner scallop and into the body). Both are exact affine
+    # skins sharing the pinned edge E->P2, so the seam never opens. The flank
+    # is pinned to the elbow, the hip anchor and the finger tip: its apex (the
+    # elbow) travels with the wing, so the inner trailing edge stays a soft
+    # concave scallop when the wing rises, flaps or folds — never a straight
+    # sail edge running to a point.
+    # (the flank's top runs mid-way through the rim band, so it tucks under
+    # the arm without poking above it)
+    web = arm + [(WS, WW, False), (WE, WP2, True)]
+    flank = arm + [(WE, WP2, False), ((WS[0], WS[1] - 8), (WE[0], WE[1] - 8), False), (toward(WS, WB, -0.2), toward(WB, WS, -2), True)]
     pieces = {}
     for name, cuts, which in (("tip", tip, None), ("hand", hand, None), ("web", web, "mem"),
                               ("flank", flank, "mem"), ("arm", arm, "rim")):
@@ -684,12 +698,12 @@ def wing(side):
         f'<g data-om-bone="wing-{side}" data-om-pivot="{X(WS)}" data-om-z="-20" data-om-surface="flat" data-om-flat-min="0.1" '
         f'data-om-spring="90 9" data-om-tip="{s * 196} -72">',
         # pinned skins sort far behind the rest of the wing (they are the membrane)
-        f'  <g data-om-bone="wing-flank-{side}" data-om-pivot="{X(WB)}" data-om-sort-z="-400" '
-        f'data-om-pin="wing-root-{side} {X(WB)} wing-{side} {X(WS)} wing-hand-{side} {X(WP2)}">',
+        f'  <g data-om-bone="wing-flank-{side}" data-om-pivot="{X(WS)}" data-om-sort-z="-401" '
+        f'data-om-pin="wing-{side} {X(WE)} wing-root-{side} {X(WB)} wing-hand-{side} {X(WP2)}">',
     ] + ["  " + l for l in art("flank")] + [
         "  </g>",
         f'  <g data-om-bone="wing-web-{side}" data-om-pivot="{X(WS)}" data-om-sort-z="-400" '
-        f'data-om-pin="wing-{side} {X(WW)} wing-hand-{side} {X(WP2)}">',
+        f'data-om-pin="wing-{side} {X(WE)} wing-{side} {X(WW)} wing-hand-{side} {X(WP2)}">',
     ] + ["  " + l for l in art("web")] + ["  </g>"] + art("arm") + ["  " + cap] + [
         f'  <g data-om-bone="wing-hand-{side}" data-om-pivot="{X(WW)}" data-om-surface="flat" data-om-flat-min="0.1">',
     ] + ["  " + l for l in art("hand")] + [
