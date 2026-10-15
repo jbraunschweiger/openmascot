@@ -4,29 +4,15 @@
  * Clips are authored in parallel and appear over time, so everything here
  * looks clips up lazily and degrades gracefully when a name is missing.
  */
-import { clipSeconds, type Clip, type MascotOptions } from '@openmascot/core';
-import { characters, clipCategories } from '@openmascot/characters';
-
-export const echo = characters.echo;
-
-/** All clips available to Echo (shared library + Echo-only clips). */
-export function allClips(): Record<string, Clip> {
-  return echo.clips ?? {};
-}
-
-export function getClip(name: string): Clip | undefined {
-  return allClips()[name];
-}
-
-export function hasClip(name: string): boolean {
-  return !!allClips()[name];
-}
+import { clipSeconds, type CharacterDef, type Clip, type MascotOptions } from '@openmascot/core';
+import { clipCategories } from '@openmascot/characters';
+import { clipsOf } from './cast';
 
 /** Clip names grouped by category, in a friendly order. */
 export const CATEGORY_ORDER = ['idle', 'emotion', 'gesture', 'dance', 'pose', 'locomotion', 'fidget', 'other'];
 
-export function groupedClips(): [string, string[]][] {
-  const cats = clipCategories(allClips());
+export function groupedClips(c: CharacterDef): [string, string[]][] {
+  const cats = clipCategories(clipsOf(c));
   const keys = Object.keys(cats).sort((a, b) => {
     const ia = CATEGORY_ORDER.indexOf(a);
     const ib = CATEGORY_ORDER.indexOf(b);
@@ -41,14 +27,6 @@ export function seconds(clip: Clip, bpm?: number) {
 }
 
 export const isBeats = (clip?: Clip) => clip?.units === 'beats';
-
-/** Expression names that best match an emote/pose clip name (used for "coming soon" fallbacks). */
-export function expressionFor(clipName: string): string | undefined {
-  const base = clipName.replace(/^emote-/, '');
-  const map: Record<string, string> = { sing: 'singing', 'in-love': 'inlove' };
-  const e = map[base] ?? base;
-  return echo.expressions[e] ? e : undefined;
-}
 
 export const pretty = (name: string) => name.replace(/^(emote|dance|fidget)-/, '').replace(/-/g, ' ');
 
@@ -138,7 +116,4 @@ export async function copyText(text: string): Promise<boolean> {
   }
 }
 
-/** Query params from the hash route (`#/studio?clip=fly`). */
-export function hashParams(): URLSearchParams {
-  return new URLSearchParams(location.hash.split('?')[1] ?? '');
-}
+export { hashQuery as hashParams } from './cast';

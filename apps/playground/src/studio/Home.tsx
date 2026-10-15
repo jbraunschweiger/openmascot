@@ -2,9 +2,11 @@
  * Home — landing page for the OpenMascot open-source project.
  */
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
-import { Mascot, useMascotRef } from '@openmascot/react';
-import type { MascotEvent } from '@openmascot/core';
-import { allClips, copyText, DEMO_OPTIONS, echo, hasClip, isBeats } from './shared';
+import { useMascotRef } from '@openmascot/react';
+import type { CharacterDef, MascotEvent } from '@openmascot/core';
+import { copyText, DEMO_OPTIONS, isBeats } from './shared';
+import { CAST, clipsOf, getCharacter, hasClip, ownClips, taglineOf, tintOf, useCharacterSelection } from './cast';
+import { CharacterPicker, SafeMascot } from './cast-ui';
 import { Code, useInterval } from './ui';
 import './studio.css';
 
@@ -19,7 +21,7 @@ const CARD_PAD = 30;
 const FALLBACK_REACTIONS = ['demo-spin', 'demo-bop', 'fidget-hop', 'fidget-wing-stretch', 'fly'];
 const REACTION_FX = ['sparkles', 'hearts', 'notes', 'confetti', 'burst'];
 
-function Hero() {
+function Hero({ c, picker }: { c: CharacterDef; picker: ReactNode }) {
   const ref = useMascotRef();
   const [label, setLabel] = useState('Click me!');
   const last = useRef('');
@@ -27,7 +29,7 @@ function Hero() {
   const react = () => {
     const rt = ref.current?.runtime;
     if (!rt) return;
-    let cands = Object.entries(allClips())
+    let cands = Object.entries(clipsOf(c))
       .filter(([n, c]) => c.category === 'emotion' || c.category === 'dance' || /^(emote|dance)-/.test(n))
       .map(([n]) => n);
     if (!cands.length) cands = FALLBACK_REACTIONS.filter((n) => rt.clips[n]);
@@ -76,10 +78,13 @@ function Hero() {
             <button onClick={async () => (setCopied(await copyText('npm i @openmascot/react @openmascot/characters')), setTimeout(() => setCopied(false), 1400))}>{copied ? 'Copied' : 'Copy'}</button>
           </div>
         </div>
-        <div className="hm-stage" onClick={react} role="button" tabIndex={0} aria-label="Make Echo react" onKeyDown={(e) => (e.key === 'Enter' || e.key === ' ') && (e.preventDefault(), react())}>
-          <div className="hm-stage-ring" />
-          <Mascot ref={ref} character={echo} lookAtPointer padding={HERO_PAD} options={DEMO_OPTIONS} className="hm-mascot" style={{ width: '100%', height: '100%' }} title="Echo the bat — click me" />
-          <span className="hm-bubble">{label}</span>
+        <div className="hm-stage-col">
+          <div className="hm-stage" onClick={react} role="button" tabIndex={0} aria-label={`Make ${c.name} react`} onKeyDown={(e) => (e.key === 'Enter' || e.key === ' ') && (e.preventDefault(), react())}>
+            <div className="hm-stage-ring" />
+            <SafeMascot key={c.id} ref={ref} character={c} lookAtPointer padding={HERO_PAD} options={DEMO_OPTIONS} className="hm-mascot" style={{ width: '100%', height: '100%' }} title={`${c.name} — click me`} />
+            <span className="hm-bubble">{label}</span>
+          </div>
+          {picker}
         </div>
       </div>
     </header>
@@ -121,29 +126,32 @@ function Feature(props: { title: string; tag?: ReactNode; ctl?: ReactNode; child
 
 const mini = { width: '84%', height: '100%' };
 
-function SpinDemo() {
+function SpinDemo({ c }: { c: CharacterDef }) {
   return (
     <Feature title="Pseudo-3D from flat art" tag="root.yaw: 0 → 360" body={<>A single front-view drawing spins, turns its head and nods. Depth sorting, parallax and back-face culling come from a few <code>data-om-*</code> hints.</>}>
-      <Mascot character={echo} animation="demo-spin" options={DEMO_OPTIONS} padding={MINI_PAD} style={mini} />
+      <SafeMascot character={c} animation="demo-spin" options={DEMO_OPTIONS} padding={MINI_PAD} style={mini} />
     </Feature>
   );
 }
 
 const EXPR_CYCLE = ['happy', 'excited', 'inlove', 'unimpressed', 'playful', 'surprised', 'sad', 'proud', 'dizzy', 'wink'];
 
-function ExpressionDemo() {
-  const list = useMemo(() => EXPR_CYCLE.filter((e) => echo.expressions[e]), []);
+function ExpressionDemo({ c }: { c: CharacterDef }) {
+  const list = useMemo(() => {
+    const l = EXPR_CYCLE.filter((e) => c.expressions?.[e]);
+    return l.length ? l : Object.keys(c.expressions ?? {}).slice(0, 10);
+  }, [c]);
   const [i, setI] = useState(0);
-  useInterval(() => setI((n) => (n + 1) % list.length), 1500);
+  useInterval(() => setI((n) => (n + 1) % Math.max(1, list.length)), 1500);
   return (
     <Feature title="Expressions" tag={`setExpression('${list[i]}')`} body={<>Swap eyes, mouth and blush variants by name. Eye changes hide behind a quick blink — the way a 2D animator would do it.</>}>
-      <Mascot character={echo} expression={list[i]} padding={MINI_PAD} style={mini} />
+      <SafeMascot character={c} expression={list[i % Math.max(1, list.length)]} padding={MINI_PAD} style={mini} />
     </Feature>
   );
 }
 
-function DanceDemo() {
-  const dance = useMemo(() => Object.entries(allClips()).find(([n, c]) => c.category === 'dance' || n.startsWith('dance-'))?.[0] ?? 'demo-bop', []);
+function DanceDemo({ c }: { c: CharacterDef }) {
+  const dance = useMemo(() => (hasClip(c, 'dance-bop') ? 'dance-bop' : Object.entries(clipsOf(c)).find(([n, cl]) => cl.category === 'dance' || n.startsWith('dance-'))?.[0]) ?? 'demo-bop', [c]);
   const [bpm, setBpm] = useState(120);
   const ref = useMascotRef();
   const dot = useRef<HTMLSpanElement>(null);
@@ -182,14 +190,14 @@ function DanceDemo() {
       }
       body={<>Author dances in beats and retime them to the song playing in your app. Moves chain into routines with <code>sequence()</code>.</>}
     >
-      <Mascot ref={ref} character={echo} animation={dance} bpm={bpm} options={DEMO_OPTIONS} padding={MINI_PAD} style={mini} onEvent={onEvent} />
+      <SafeMascot key={c.id} ref={ref} character={c} animation={dance} bpm={bpm} options={DEMO_OPTIONS} padding={MINI_PAD} style={mini} onEvent={onEvent} />
     </Feature>
   );
 }
 
 const FX_CYCLE = ['hearts', 'sparkles', 'notes', 'confetti', 'burst', 'question', 'exclaim', 'zzz', 'dizzy'];
 
-function EffectsDemo() {
+function EffectsDemo({ c }: { c: CharacterDef }) {
   const ref = useMascotRef();
   const [name, setName] = useState('hearts');
   const i = useRef(0);
@@ -204,29 +212,35 @@ function EffectsDemo() {
   }, 1700);
   return (
     <Feature title="Effects that punctuate" tag={`emit('${name}')`} body={<>Analytic particles anchored to bones: deterministic for frame sheets and video, free to simulate, and triggered from clips on the accent frame.</>}>
-      <Mascot ref={ref} character={echo} padding={[70, 46, 30, 46]} style={mini} />
+      <SafeMascot key={c.id} ref={ref} character={c} padding={[70, 46, 30, 46]} style={mini} />
     </Feature>
   );
 }
 
-function SpringDemo() {
+function SpringDemo({ c }: { c: CharacterDef }) {
   return (
     <Feature title="Secondary motion" tag="data-om-spring=&quot;90 9&quot;" body={<>Ears, tuft and wings are springs: they lag behind, overshoot and settle on their own. Follow-through you never have to keyframe.</>}>
-      <Mascot character={echo} animation="demo-springs" options={DEMO_OPTIONS} padding={MINI_PAD} style={mini} />
+      <SafeMascot character={c} animation="demo-springs" options={DEMO_OPTIONS} padding={MINI_PAD} style={mini} />
     </Feature>
   );
 }
 
-const XFADE = ['idle', 'fly', 'cloak', 'fly-side', 'hang'];
+const XFADE_FALLBACK = ['wave', 'jump', 'bow', 'turn-around'];
 
-function CrossfadeDemo() {
-  const list = useMemo(() => XFADE.filter(hasClip), []);
+function CrossfadeDemo({ c }: { c: CharacterDef }) {
+  // idle ⇄ the character's own pose/locomotion clips (Echo: fly, cloak, fly-side, hang…)
+  const list = useMemo(() => {
+    const clips = clipsOf(c);
+    const own = ownClips(c).filter((n) => clips[n].category === 'pose' || clips[n].category === 'locomotion');
+    const picks = (own.length >= 2 ? own : XFADE_FALLBACK.filter((n) => clips[n])).slice(0, 4);
+    return [c.idle?.clip ?? 'idle', ...picks].filter((n) => clips[n]);
+  }, [c]);
   const [i, setI] = useState(0);
   useInterval(() => setI((n) => (n + 1) % list.length), 2600);
   const name = list[i] ?? 'idle';
   return (
     <Feature title="Natural crossfades" tag={`play('${name}', { fade: .6 })`} body={<>Every transition blends pose tracks over time, layered with breathing, blinking, glances and idle fidgets, so the character never pops or freezes.</>}>
-      <Mascot character={echo} animation={name} fade={0.6} padding={[60, 46, 46, 46]} style={mini} />
+      <SafeMascot character={c} animation={name} fade={0.6} padding={[60, 46, 46, 46]} style={mini} />
     </Feature>
   );
 }
@@ -461,17 +475,21 @@ const LINEUP: { name: string; blurb: string; tint: string; art: ReactNode }[] = 
 ];
 
 function Lineup() {
+  const live = new Set(CAST.map((c) => c.name.toLowerCase()));
+  const soon = LINEUP.filter((l) => !live.has(l.name.toLowerCase()));
   return (
     <div className="hm-lineup">
-      <article className="hm-char" style={{ ['--tint' as string]: '#6b4fd8' }}>
-        <span className="hm-live-badge">Live</span>
-        <div className="hm-char-art">
-          <Mascot character={echo} padding={CARD_PAD} lookAtPointer className="hm-char-mascot" style={{ width: '92%', height: '100%' }} />
-        </div>
-        <h4>Echo</h4>
-        <p>the music-loving bat</p>
-      </article>
-      {LINEUP.map((c) => (
+      {CAST.map((c) => (
+        <a key={c.id} className="hm-char live" style={{ ['--tint' as string]: tintOf(c) }} href={`#/gallery?char=${encodeURIComponent(c.id)}`} title={`Open ${c.name} in the gallery`}>
+          <span className="hm-live-badge">Live</span>
+          <div className="hm-char-art">
+            <SafeMascot character={c} padding={CARD_PAD} lookAtPointer className="hm-char-mascot" style={{ width: '92%', height: '100%' }} />
+          </div>
+          <h4>{c.name}</h4>
+          <p>{taglineOf(c) ?? LINEUP.find((l) => l.name.toLowerCase() === c.name.toLowerCase())?.blurb ?? ''}</p>
+        </a>
+      ))}
+      {soon.map((c) => (
         <article key={c.name} className="hm-char soon" style={{ ['--tint' as string]: c.tint }}>
           <span className="hm-soon">Coming soon</span>
           <div className="hm-char-art">
@@ -490,9 +508,12 @@ function Lineup() {
 /* ------------------------------------------------------------------ */
 
 export function Home() {
+  const [id, select] = useCharacterSelection();
+  const c = getCharacter(id) ?? CAST[0];
+  const picker = <CharacterPicker value={c.id} onChange={select} className="hm-picker" />;
   return (
     <div className="hm">
-      <Hero />
+      <Hero c={c} picker={picker} />
 
       <section className="hm-section">
         <div className="hm-wrap">
@@ -516,12 +537,12 @@ export function Home() {
           <h2 className="hm-h2">Game-engine animation, web-sized</h2>
           <p className="hm-sub">Clips crossfade on top of living idle layers, params drive bones portably across characters, and springs add follow-through for free. Everything below is running live.</p>
           <div className="hm-features">
-            <SpinDemo />
-            <ExpressionDemo />
-            <DanceDemo />
-            <EffectsDemo />
-            <SpringDemo />
-            <CrossfadeDemo />
+            <SpinDemo key={`spin-${c.id}`} c={c} />
+            <ExpressionDemo key={`expr-${c.id}`} c={c} />
+            <DanceDemo key={`dance-${c.id}`} c={c} />
+            <EffectsDemo key={`fx-${c.id}`} c={c} />
+            <SpringDemo key={`spring-${c.id}`} c={c} />
+            <CrossfadeDemo key={`xfade-${c.id}`} c={c} />
           </div>
         </div>
       </section>
@@ -539,7 +560,9 @@ export function Home() {
         <div className="hm-wrap">
           <div className="hm-kicker">The cast</div>
           <h2 className="hm-h2">Meet the band</h2>
-          <p className="hm-sub">Echo is the first rigged character. More friends sharing the same standard bone names — and therefore the same clip library — are on their way.</p>
+          <p className="hm-sub">
+            {CAST.length > 1 ? `${CAST.map((x) => x.name).join(', ').replace(/, ([^,]*)$/, ' and $1')} are rigged and live` : `${CAST[0].name} is the first rigged character`}. They share the standard bone names — and therefore the same clip library{LINEUP.some((l) => !CAST.some((x) => x.name.toLowerCase() === l.name.toLowerCase())) ? '; more friends are on their way' : ''}.
+          </p>
           <Lineup />
         </div>
       </section>
@@ -557,7 +580,7 @@ export function Home() {
             </a>
           </div>
           <footer className="hm-footer">
-            <span>OpenMascot — MIT licensed. Echo © the OpenMascot authors.</span>
+            <span>OpenMascot — MIT licensed. {CAST.map((x) => x.name).join(', ')} © the OpenMascot authors.</span>
             <span>
               <a href="#/studio">Studio</a> · <a href="#/gallery">Gallery</a> · <a href="#/app">App showcase</a>
             </span>
