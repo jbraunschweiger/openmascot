@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { clipSeconds, lintClip, sampleClip, sampleTrack, secondsPerUnit } from '../src/clip';
 import { EASES } from '../src/ease';
 import { emptyPose } from '../src/pose';
@@ -31,6 +31,15 @@ describe('sampleTrack', () => {
     expect(sampleTrack(q, 0.5)).toBeCloseTo(25);
     const b: Keyframe[] = [[0, 0, [0, 0, 1, 1]], [1, 100]];
     expect(sampleTrack(b, 0.3)).toBeCloseTo(30, 3);
+  });
+  it('falls back to linear (warning once) for unknown eases', () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    const bad = [[0, 0, 'zigzag'], [1, 10]] as unknown as Keyframe[];
+    expect(sampleTrack(bad, 0.5)).toBe(5);
+    expect(sampleTrack(bad, 0.25)).toBe(2.5);
+    expect(warn).toHaveBeenCalledTimes(1);
+    expect(warn.mock.calls[0][0]).toContain('Unknown ease "zigzag"');
+    warn.mockRestore();
   });
   it('step ease holds the value until the next key', () => {
     const s: Keyframe[] = [[0, 1, 'step'], [1, 5, 'step'], [2, 9]];

@@ -178,6 +178,88 @@ describe('Mascot: playback', () => {
   });
 });
 
+describe('Mascot: playback controls', () => {
+  it('clip.then sets the default follow-up; play options override it', () => {
+    const a = make();
+    a.m.play({ name: 'h', duration: 0.5, then: null, bones: { head: { x: [[0, 0]] } } }, { fade: 0 });
+    run(a.m, 1);
+    expect(a.m.playing).toBe('h');
+    const b = make();
+    b.m.play({ name: 'h', duration: 0.5, then: 'spin', bones: { head: { x: [[0, 0]] } } }, { fade: 0 });
+    run(b.m, 1);
+    expect(b.m.playing).toBe('spin');
+    const c = make();
+    c.m.play({ name: 'h', duration: 0.5, then: null, bones: { head: { x: [[0, 0]] } } }, { fade: 0, then: 'idle' });
+    run(c.m, 1);
+    expect(c.m.playing).toBe('idle');
+  });
+
+  it('initialOptions apply to the initial clip', () => {
+    const { m } = make({ initial: 'wave', initialOptions: { then: null } });
+    run(m, 2);
+    expect(m.playing).toBe('wave');
+  });
+
+  it('progress() reports the dominant clip position', () => {
+    const { m } = make();
+    m.play('spin', { fade: 0 });
+    run(m, 1.25);
+    const p = m.progress()!;
+    expect(p.clip).toBe('spin');
+    expect(p.duration).toBe(1);
+    expect(p.loop).toBe(true);
+    expect(p.time).toBeCloseTo(0.25, 6);
+    const w = make();
+    w.m.play('wave', { fade: 0, then: null });
+    run(w.m, 3);
+    expect(w.m.progress()).toEqual({ clip: 'wave', time: 1, duration: 1, loop: false });
+  });
+
+  it('setSpeed changes the speed of the playing clip', () => {
+    const { m } = make();
+    m.play('wave', { fade: 0 });
+    run(m, 0.25);
+    m.setSpeed(2);
+    run(m, 0.25);
+    expect(m.progress()!.time).toBeCloseTo(0.75, 6);
+  });
+
+  it('setTempo retimes a beat clip and preserves its phase', () => {
+    const { m } = make();
+    m.play({ name: 'b', duration: 8, units: 'beats', bpm: 120, loop: true, bones: { head: { x: [[0, 0]] } } }, { fade: 0 });
+    run(m, 1); // 2 beats of 8 at 120 bpm
+    const before = m.progress()!;
+    expect(before.time / before.duration).toBeCloseTo(0.25, 6);
+    m.setTempo(60);
+    const after = m.progress()!;
+    expect(after.duration).toBe(8);
+    expect(after.time / after.duration).toBeCloseTo(0.25, 6);
+  });
+
+  it('setAlive toggles autonomous life', () => {
+    const { m } = make();
+    expect(m.isAlive).toBe(false);
+    m.setAlive(true);
+    expect(m.isAlive).toBe(true);
+    let minSy = 1;
+    for (let i = 0; i < 6 * 60; i++) {
+      m.update(1 / 60);
+      minSy = Math.min(minSy, m.current.frame.bones[m.rig.bonesByName['eye-l'][0].bi].local[3]);
+    }
+    expect(minSy).toBeLessThan(0.3);
+  });
+
+  it('clip.shadow scales the shadow opacity', () => {
+    const { m } = make();
+    const shadow = () => m.current.frame.bones[m.rig.bonesByName.shadow[0].bi].opacity;
+    m.update(DT);
+    expect(shadow()).toBe(1);
+    m.play({ name: 'hang', duration: 1, loop: true, shadow: 0, bones: { head: { x: [[0, 0]] } } }, { fade: 0 });
+    m.update(DT);
+    expect(shadow()).toBe(0);
+  });
+});
+
 describe('Mascot: clip events', () => {
   const evClip: Clip = {
     name: 'ev',
@@ -319,6 +401,13 @@ describe('Mascot: expressions & blink masking', () => {
     expect(swappedAt).toBeGreaterThan(0);
     expect(sy).toBeLessThan(0.5); // eyes (mostly) closed at the moment of the swap
     run(m, 0.5);
+    expect(m.current.frame.slots['eye-l']).toBe('happy');
+  });
+
+  it('clips can opt out of blink masking', () => {
+    const { m } = make();
+    m.play({ name: 'nb', duration: 1, loop: true, blinkMask: false, expression: [[0, 'happy']] }, { fade: 0 });
+    m.update(DT);
     expect(m.current.frame.slots['eye-l']).toBe('happy');
   });
 

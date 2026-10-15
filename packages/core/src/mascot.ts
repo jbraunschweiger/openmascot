@@ -17,6 +17,7 @@ import { blendPoses, emptyPose, resolvePose } from './pose';
 import { compileRig, type RigWarning } from './rig';
 import { bonePosition, solve, type SolveOptions } from './solve';
 import type { BoneNode, CharacterDef, Clip, ClipContext, EffectEvent, Frame, Pose, Rig } from './types';
+import { REST } from './types';
 
 export interface MascotOptions {
   /** Shared clip library; character clips override same-named entries. */
@@ -532,8 +533,9 @@ export class Mascot {
     }
 
     // Shadow follows root and fades/shrinks with height.
-    const root = resolved.channels.get('root');
-    if (root) {
+    // (Also when the root is at rest, so a clip's `shadow` factor always applies.)
+    const root = resolved.channels.get('root') ?? REST;
+    {
       const shadowBones = this.rig.bones.filter((b) => b.shadow);
       for (const sb of shadowBones) {
         const c = resolved.channels.get(sb.name) ?? { x: 0, y: 0, rot: 0, sx: 1, sy: 1, yaw: 0, pitch: 0, dz: 0, opacity: 1 };

@@ -23,7 +23,7 @@ export function Buddy() {
         onEvent={(e) => e.type === 'end' && console.log('done', e.clip)}
         style={{ width: 240 }}
       />
-      <button onClick={() => ref.current?.play('emote-celebrate')}>🎉</button>
+      <button onClick={() => ref.current?.play('emote-celebrate')}>Celebrate</button>
     </>
   );
 }

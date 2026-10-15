@@ -36,6 +36,7 @@ const m = new Mascot(character, options?);
 | `seed` | `1` | RNG seed for blinks, glances, fidgets, effects, `ctx.random` |
 | `alive` | `true` | autonomous life: breathing, blinks, glances, fidgets |
 | `initial` | idle clip | clip to start with (a name that doesn't exist = no clip) |
+| `initialOptions` | — | `PlayOptions` for the initial clip (e.g. `{ then: null, bpm: 100 }`) |
 | `solve` | — | `{ focal?: number = 900, faceForeshorten?: number = 0.85 }`, see [pseudo-3d.md](pseudo-3d.md) |
 | `effectScale` | `1` | size multiplier for all effects |
 | `recolor` | — | `{ '#634c91': '#2a9d8f' }` colour substitutions (case-insensitive) |
@@ -57,6 +58,10 @@ const m = new Mascot(character, options?);
 | `emit(effect, { at?, params? })` | spawn an effect now ([effects.md](effects.md)) |
 | `clearEffects()` | remove all particles |
 | `blink()` | blink now |
+| `setAlive(on)`, `isAlive` | toggle / read autonomous life |
+| `setSpeed(speed)` | change the speed of the playing clip |
+| `setTempo(bpm)` | retime the playing beat clip without restarting it (phase preserved) |
+| `progress()` | `{ clip, time, duration, loop }` of the dominant clip (seconds), or `undefined` |
 | `on(listener): () => void` | subscribe to `MascotEvent`s; returns an unsubscribe function |
 | `time`, `rig`, `clips`, `effects`, `character`, `warnings` | read-only state (`warnings` = rig compile warnings) |
 
@@ -68,12 +73,21 @@ const m = new Mascot(character, options?);
 | `loop` | `clip.loop` | override looping |
 | `speed` | `1` | playback speed multiplier |
 | `bpm` | `clip.bpm ?? 120` | tempo for `units: 'beats'` clips |
-| `then` | idle clip | for one-shots (and loops with `repeat`): clip to continue with; `null` holds the last frame |
+| `then` | `clip.then ?? idle` | for one-shots (and loops with `repeat`): clip to continue with; `null` holds the last frame |
 | `repeat` | `Infinity` | for loops: stop after N cycles |
 | `offset` | `0` | start offset in seconds |
 
 **`MascotEvent`**: `{ type: 'start' | 'end' | 'loop', clip }`,
 `{ type: 'effect', clip, effect }`, `{ type: 'expression', expression }`.
+
+**`Clip` fields** (see [animation.md](animation.md) for authoring):
+`duration`, `units` (`'seconds' | 'beats'`), `bpm`, `loop`, `bones`, `params`,
+`expression` (`[time, name][]`), `slots` (`{ slot: [time, variant][] }`, `''` =
+no override), `events`, `fn` (procedural hook), `suppress` (`{ blink, breathe,
+look, fidget }`), `fadeIn`, `then` (default follow-up, `null` = hold),
+`shadow` (shadow opacity factor, e.g. `0` while hanging), `blinkMask`
+(`false` = swap eye art without the masking blink), `name`, `description`,
+`category`.
 
 ### Rig
 
@@ -244,6 +258,7 @@ ref.current?.play('wave');
 | `options` | extra `MascotOptions` (seed, recolor, library, effects…), read on mount |
 | `onEvent` | `MascotEvent` callback |
 | `className`, `style`, `title` | host `<div>` / accessible title |
+| any other `<div>` attribute | forwarded to the host `<div>` (`id`, `aria-*`, `onClick`, …) |
 
 `MascotHandle`: `play`, `emit`, `setExpression`, `lookAt`, `blink`, and
 read-only `runtime` (the `Mascot`) and `player` (the `MascotPlayer`).
