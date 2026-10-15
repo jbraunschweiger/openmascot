@@ -447,9 +447,17 @@ export class Mascot {
       if (t.loop && !t.ended) u = ((u % dur) + dur) % dur;
       else u = Math.min(u, dur);
       const p = sampleClip(t.clip, u, t.ctx);
+      this.fillRestParams(p);
       pose = pose ? blendPoses(pose, p, t.weight) : p;
     }
-    return pose ?? emptyPose();
+    return pose ?? this.fillRestParams(emptyPose());
+  }
+
+  /** Params a clip doesn't animate start from the character's `restParams`. */
+  private fillRestParams(p: Pose): Pose {
+    const rest = this.character.restParams;
+    if (rest) for (const k in rest) if (p.params[k] === undefined) p.params[k] = rest[k];
+    return p;
   }
 
   private evaluate(dt: number): MascotFrame {

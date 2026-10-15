@@ -9,10 +9,9 @@
 import { useCallback, useEffect, useState } from 'react';
 import { Mascot, renderSvg, type CharacterDef, type Clip, type Rig } from '@openmascot/core';
 import { characters, library } from '@openmascot/characters';
-import { devFakeCharacters } from './dev-fake';
 
 /** Registered characters (registry order), plus dev-only stand-ins when the registry has a single one. */
-export const CAST: CharacterDef[] = [...Object.values(characters), ...devFakeCharacters(characters)];
+export const CAST: CharacterDef[] = Object.values(characters);
 
 export const DEFAULT_ID = CAST.find((c) => c.id === 'echo')?.id ?? CAST[0].id;
 

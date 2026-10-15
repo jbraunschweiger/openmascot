@@ -129,14 +129,22 @@ export function resolvePose(character: Pick<CharacterDef, 'params' | 'expression
     if (def.min !== undefined) v = Math.max(def.min, v);
     if (def.max !== undefined) v = Math.min(def.max, v);
     params[name] = v;
-    for (const d of def.drives) {
-      const delta = d.curve ? piecewise(d.curve, v) : v * (d.k ?? 1);
+  }
+  for (const k in pose.params) if (!(k in params)) params[k] = pose.params[k];
+  for (const name in defs) {
+    const v = params[name];
+    for (const d of defs[name].drives) {
+      let x = v;
+      if (d.input) {
+        x = 0;
+        for (const k in d.input) x += (params[k] ?? 0) * d.input[k];
+      }
+      const delta = d.curve ? piecewise(d.curve, x) : x * (d.k ?? 1);
       if (delta === 0) continue;
       const c = get(d.bone);
       c[d.channel] += delta;
     }
   }
-  for (const k in pose.params) if (!(k in params)) params[k] = pose.params[k];
 
   const slots: Record<string, string> = {};
   for (const s of rig.slots) slots[s.name] = s.defaultVariant;

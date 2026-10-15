@@ -138,8 +138,10 @@ describe('solve: pseudo-3D', () => {
     expect(back.local[0]).toBeCloseTo(-1, 6);
     expect(det(back.world)).toBeLessThan(0); // mirrored
     expect(back.opacity).toBe(1);
-    // edge-on flat art fades out instead of showing a sliver
-    expect(at(90).opacity).toBe(0);
+    // Echo's wings set data-om-flat-min="0.1": edge-on they keep a thin,
+    // opaque sliver instead of fading out (see 'solve: rig features')
+    expect(at(90).opacity).toBe(1);
+    expect(Math.abs(at(90).local[0])).toBeCloseTo(0.1, 6);
   });
 
   it('re-sorts by depth: wings (z −20) draw in front of the body when seen from behind', () => {

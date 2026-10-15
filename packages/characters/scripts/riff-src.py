@@ -243,14 +243,19 @@ def core_piece(outline, a, cy, b, n=3.2, steps=48):
     return smooth(top + bot[::-1][1:-1], closed=True)
 
 
-def side_piece(outline, x_cut, y_min=-1e9):
+def side_piece(outline, x_cut, cap=None):
     """The part of a symmetric closed outline (built by `sym`, so its first
     half runs down the LEFT side) left of x = x_cut (< 0), closed along the
-    cut. Used to split a wide volume into a core + side pieces that
+    cut. `cap(x)` optionally trims the top to y >= cap(x) along a rounded
+    shoulder. Used to split a wide volume into a core + side pieces that
     parallax apart when the character turns."""
-    pts = sample_path(outline)
-    left = [p for p in pts[: len(pts) // 2 + 1] if p[0] <= x_cut and p[1] >= y_min]
-    return poly([(x_cut, left[0][1])] + left + [(x_cut, left[-1][1])])
+    pts = sample_path(outline, 48)
+    left = [p for p in pts[: len(pts) // 2 + 1] if p[0] <= x_cut and (cap is None or p[1] >= cap(p[0]))]
+    if cap is None:
+        return poly([(x_cut, left[0][1])] + left + [(x_cut, left[-1][1])])
+    x0 = left[0][0]
+    top = [(x_cut + (x0 - x_cut) * i / 16, cap(x_cut + (x0 - x_cut) * i / 16)) for i in range(16)]
+    return poly(top + left + [(x_cut, left[-1][1])])
 
 
 # ================================================================ geometry
@@ -584,7 +589,11 @@ def hind_leg(side):
     ] + ["  " + f'<circle cx="{f(s * -x)}" cy="{f(y)}" r="{f(r)}" fill="{C["leg"]}"/>' for x, y, r in HINDTOE_L] + ["</g>"]
     shin = wrap(
         f'<g data-om-bone="shin-{side}" data-om-pivot="{s * 124} -62" data-om-z="2">',
-        [path(m(SHIN_L), C["leg"]), path(m(SHIN_CREASE_L), C["leg_crease"])] + foot,
+        [path(m(SHIN_L), C["leg"])]
+        # the fold shadow is a front detail: a face bone so it culls from behind
+        + wrap(f'<g data-om-bone="crease-{side}" data-om-pivot="{s * 98} -42" data-om-z="1" data-om-surface="face">',
+               [path(m(SHIN_CREASE_L), C["leg_crease"])])
+        + foot,
     )
     return wrap(
         f'<g data-om-bone="leg-{side}" data-om-pivot="{s * 104} -58" data-om-z="-14">',
@@ -601,12 +610,13 @@ def cheek(side):
 
 
 def flank(side):
-    """Side of the body, set back so the body narrows in profile. Kept below
-    the head line: it out-sorts the head when the body turns."""
+    """Side of the body, set back so the body narrows in profile. Its top is a
+    rounded shoulder kept below the eyes: it out-sorts the head when the body
+    turns, and shows as the shoulder when the head tilts."""
     m = (lambda d: d) if side == "l" else mirror
     s = -1 if side == "l" else 1
     return wrap(f'<g data-om-bone="flank-{side}" data-om-pivot="{s * 66} -60" data-om-z="-10">',
-                [path(m(side_piece(BODY, -54, -100)), C["body"])])
+                [path(m(side_piece(BODY, -54, cap=lambda x: -107 + 24 * ((x + 54) / 52) ** 2)), C["body"])])
 
 
 def lily_pad():

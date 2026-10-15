@@ -214,6 +214,12 @@ export interface ParamDriver {
   k?: number;
   /** Piecewise-linear mapping `[[param, channelDelta], …]` (sorted by param). */
   curve?: [number, number][];
+  /**
+   * Drive from a weighted sum of params instead of the owning param alone,
+   * e.g. `{ wingFold: 1, raiseL: -1 }`: raising the left wing also unfolds it.
+   * Values are the resolved (clamped) params; missing params count as 0.
+   */
+  input?: Record<string, number>;
 }
 
 export interface CharacterDef {
@@ -238,6 +244,14 @@ export interface CharacterDef {
    * `{ tears: { eyeX: 40, eyeY: -10 } }` so shared clips land on its eyes.
    */
   effectParams?: Record<string, Record<string, unknown>>;
+  /**
+   * Param values a clip pose starts from when the clip does not animate that
+   * param (used by the `Mascot` runtime when sampling clips), e.g.
+   * `{ wingFold: 0.5 }`: clips that don't care about wings keep them relaxed
+   * instead of spread. Unlike `ParamDef.default` this does not change the
+   * rest pose (`resolvePose` of an empty pose still renders the drawing).
+   */
+  restParams?: Record<string, number>;
   /** Free-form metadata (author, licence, tags). */
   meta?: Record<string, unknown>;
 }

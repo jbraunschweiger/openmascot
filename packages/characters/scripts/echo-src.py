@@ -184,16 +184,20 @@ EAR_IN_L = P(
     ("Z",),
 )
 
+# Strands grow from a small root disc centred on the pivot and hidden inside
+# the head, so no flat base edge can swing out of the silhouette.
+TUFT_PIVOT = (0, -181)
 TUFT = P(
-    ("M", -30, -184),
-    ("C", -24, -204, -8, -219, 6, -220),
+    ("M", -12, -183),
+    ("C", -16, -203, -6, -218.5, 6, -220),
     ("C", 13, -220.5, 17, -216, 14, -212),
     ("C", 11, -208, 7, -204, 4, -200.5),
     ("C", 10, -202, 18, -202.5, 22, -199.5),
     ("C", 25.5, -196.5, 22, -192, 16, -190.5),
-    ("C", 21, -190, 26, -189, 30, -185),
-    ("L", 0, -170), ("Z",),
+    ("C", 17, -188, 15, -185.5, 12, -184),
+    ("L", 0, -172), ("Z",),
 )
+TUFT_ROOT = blob(TUFT_PIVOT[0], TUFT_PIVOT[1], 12.5, 12.5)
 
 # ---- back-view details (surface "back": only seen from behind)
 # little curl on the crown where the tuft grows
@@ -677,7 +681,7 @@ def wing(side):
     cap = path(m(blob(WW[0], WW[1], CAP_R, CAP_R)), C["rim"])
     art = lambda k: ["  " + path(m(d), col) for d, col in pcs[k]]
     lines = [
-        f'<g data-om-bone="wing-{side}" data-om-pivot="{X(WS)}" data-om-z="-20" data-om-surface="flat" '
+        f'<g data-om-bone="wing-{side}" data-om-pivot="{X(WS)}" data-om-z="-20" data-om-surface="flat" data-om-flat-min="0.1" '
         f'data-om-spring="90 9" data-om-tip="{s * 196} -72">',
         # pinned skins sort far behind the rest of the wing (they are the membrane)
         f'  <g data-om-bone="wing-flank-{side}" data-om-pivot="{X(WB)}" data-om-sort-z="-400" '
@@ -687,9 +691,9 @@ def wing(side):
         f'  <g data-om-bone="wing-web-{side}" data-om-pivot="{X(WS)}" data-om-sort-z="-400" '
         f'data-om-pin="wing-{side} {X(WW)} wing-hand-{side} {X(WP2)}">',
     ] + ["  " + l for l in art("web")] + ["  </g>"] + art("arm") + ["  " + cap] + [
-        f'  <g data-om-bone="wing-hand-{side}" data-om-pivot="{X(WW)}" data-om-surface="flat">',
+        f'  <g data-om-bone="wing-hand-{side}" data-om-pivot="{X(WW)}" data-om-surface="flat" data-om-flat-min="0.1">',
     ] + ["  " + l for l in art("hand")] + [
-        f'    <g data-om-bone="wing-tip-{side}" data-om-pivot="{X(WW)}" data-om-z="1" data-om-surface="flat">',
+        f'    <g data-om-bone="wing-tip-{side}" data-om-pivot="{X(WW)}" data-om-z="1" data-om-surface="flat" data-om-flat-min="0.1">',
     ] + ["    " + l for l in slot(f"wing-{side}", {"spread": [x[2:] for x in art("tip")] + [cap]}, "spread")] + [
         "    </g>",
         "  </g>",
@@ -710,8 +714,11 @@ def ear(side):
     m = (lambda d: d) if side == "l" else mirror
     s = -1 if side == "l" else 1
     return [
+        # ears face a little outward (normal), so from the side they read as
+        # narrow ears instead of vanishing edge-on
         f'<g data-om-bone="ear-{side}" data-om-pivot="{s * 52} -168" data-om-z="-6" '
-        f'data-om-surface="flat" data-om-spring="140 10" data-om-tip="{s * 82} -232">',
+        f'data-om-surface="flat" data-om-normal="{s * 25} 0" data-om-flat-min="0.15" '
+        f'data-om-spring="140 10" data-om-spring-limit="-22 22" data-om-tip="{s * 82} -232">',
         "  " + path(m(EAR_L), C["head"]),
         # pink inner only from the front: face surface culls when the ear turns away
         f'  <g data-om-bone="ear-{side}-inner" data-om-pivot="{s * 52} -168" data-om-z="2" data-om-surface="face">',
@@ -737,15 +744,19 @@ def build():
         path(blob(63, -100, 10, 5.5), C["blush"], ' opacity=".55"'),
     ]}
     head = (
-        ['<g data-om-bone="head" data-om-pivot="0 -140" data-om-z="4">']
+        # sort-z: the head sorts by its chin (the surface that overlaps the
+        # chest), not by its pivot, so body pitch/yaw never pull the chest over it
+        ['<g data-om-bone="head" data-om-pivot="0 -140" data-om-z="4" data-om-sort-z="60">']
         + ["  " + l for l in [
             '<g data-om-bone="head-back" data-om-pivot="0 -178" data-om-z="-30" data-om-surface="back">',
             "  " + path(HEAD_BACK_CURL, C["back_dark"]),
             "</g>"]]
         + ["  " + l for l in ear("l") + ear("r")]
         + ["  " + l for l in [
-            '<g data-om-bone="tuft" data-om-pivot="0 -192" data-om-z="-2" data-om-surface="flat" '
-            'data-om-spring="160 9" data-om-tip="10 -216">',
+            f'<g data-om-bone="tuft" data-om-pivot="{f(TUFT_PIVOT[0])} {f(TUFT_PIVOT[1])}" data-om-z="-2" '
+            'data-om-surface="flat" data-om-flat-min="0.2" data-om-spring="160 9" data-om-spring-limit="-24 24" '
+            'data-om-tip="8 -216">',
+            "  " + path(TUFT_ROOT, C["head"]),
             "  " + path(TUFT, C["head"]),
             "</g>"]]
         + ["  " + path(HEAD, C["head"])]
@@ -772,11 +783,11 @@ def build():
             "</g>"]]
         + ["  " + l for l in foot("l") + foot("r")]
         + ["  " + path(BODY, C["body"])]
-        + ["  " + l for l in head]
         + ["  " + l for l in [
-            '<g data-om-bone="belly" data-om-pivot="0 -55" data-om-z="40" data-om-surface="face">',
+            '<g data-om-bone="belly" data-om-pivot="0 -55" data-om-z="40" data-om-sort-z="10" data-om-surface="face">',
             "  " + path(BELLY, C["belly"]),
             "</g>"]]
+        + ["  " + l for l in head]
         + ["</g>"]
     )
     svg = (
