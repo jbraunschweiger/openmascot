@@ -12,9 +12,13 @@
  *  - Every track starts and ends on the same value (`cycle` / `rep`) so loops
  *    are seamless; full spins go 0 → 360°, which is the same pose as 0.
  *
+ *  - Wings: every dance sets `wingFold` (0 = spread wide, 0.5 = relaxed,
+ *    1 = tucked). Wings open for the big expressive beats and tuck in
+ *    (≈0.75) through spins so a turning wing never sweeps across the body.
+ *
  * Only standard bones (root, body, head, wing-*, foot-*) and params
- * (squash, flap, lean, lookX, lookY) are used, so these work on any
- * character that follows the standard rig conventions.
+ * (squash, flap, wingFold, raiseL/raiseR, lean, lookX, lookY) are used, so
+ * these work on any character that follows the standard rig conventions.
  */
 import { defineClips, mirrorClip, sampleTrack, sequence } from '@openmascot/core';
 import type { Clip, Ease, Keyframe } from '@openmascot/core';
@@ -109,6 +113,7 @@ const bop: Clip = {
     squash: rep(8, 1, [[0, 0.4, 'quadOut'], [0.5, -0.16]]),
     lean: rep(8, 2, [[0, -0.3], [1, 0.3]], 'sineInOut', 0.1),
     flap: rep(8, 1, [[0, -0.18], [0.5, 0.38]], 'sineInOut', 0.18),
+    wingFold: rep(8, 1, [[0, 0.35], [0.5, 0.15]], 'sineInOut', 0.2),
   },
   expression: [[0, 'happy'], [2, 'singing'], [4, 'joyful'], [6, 'singing']],
   events: [
@@ -150,6 +155,8 @@ const spin: Clip = {
       [2.9, -0.7, 'backOut'], [3.35, 0.95], [4.3, 0.6], [4.75, -0.35, 'backOut'], [5.2, 1.1, 'backOut'], [6.2, 0.9],
       [6.6, 0.25], [7, -0.1], [7.5, 0.25], [8, -0.1]),
     lean: k('sineInOut', [0, 0], [2.2, 0], [2.9, -0.25], [3.4, 0.15], [SPIN_END, 0], [5, 0], [8, 0]),
+    // tuck through the spin, fling open for the ta-da
+    wingFold: k('sineInOut', [0, 0.3], [2.2, 0.3], [2.9, 0.55], [3.3, 0.8], [4.2, 0.8], [4.75, 0.05, 'backOut'], [6.2, 0.1], [7, 0.3], [8, 0.3]),
   },
   expression: [[0, 'happy'], [2.4, 'determined'], [3.1, 'excited'], [4.6, 'proud'], [6.5, 'joyful']],
   events: [
@@ -178,6 +185,7 @@ const sway: Clip = {
   params: {
     lean: rep(8, 2, [[0, -0.5], [1, 0.5]], 'sineInOut', 0.12),
     flap: rep(8, 1, [[0, 0.95], [0.5, 0.8]], 'sineInOut', 0.3),
+    wingFold: rep(8, 1, [[0, 0.05], [0.5, 0.15]], 'sineInOut', 0.3),
     lookX: rep(8, 2, [[0, -0.3], [1, 0.3]], 'sineInOut', 0.35),
     squash: rep(8, 1, [[0, 0.12], [0.5, -0.06]]),
   },
@@ -214,6 +222,7 @@ const flapDance: Clip = {
       [6, 0.6], [6.22, -1.1, 'quadOut'], [6.5, 0.6], [7, 0.6], [7.22, -1.1, 'quadOut'], [7.5, 0.6], [8, -0.2]),
     squash: k('sineInOut', [0, 0], [0.25, 0.1], [2, 0], [4, 0.1], [5, 0.6], [6, 0.1, 'quadOut'], [6.25, -0.25], [6.5, 0.3], [7, 0.1], [7.25, -0.25], [7.5, 0.3], [8, 0]),
     lean: k('sineInOut', [0, 0], [4, 0], [4.25, 0.3], [4.5, -0.3], [4.75, 0.3], [5, -0.3], [5.25, 0.3], [5.5, -0.3], [5.75, 0.3], [6, 0], [8, 0]),
+    wingFold: k('sineInOut', [0, 0.45], [1.9, 0.45], [2.12, 0], [3.9, 0], [4.3, 0.55], [5.7, 0.55], [6, 0.05], [7.6, 0.05], [8, 0.45]),
   },
   expression: [[0, 'excited'], [2, 'joyful'], [4, 'playful'], [6, 'joyful']],
   events: [
@@ -257,6 +266,7 @@ const hop: Clip = {
     flap: k('sineInOut', [0, -0.3], [0.65, -0.7], [1.05, 1.2, 'backOut'], [1.7, 0.6], [2.12, -0.5, 'quadOut'],
       [2.6, 0.7], [3.12, -0.4, 'quadOut'], [3.6, 0.7], [4.12, -0.4, 'quadOut'], [4.6, 0.7], [5.12, -0.4, 'quadOut'], [5.6, 0.7], [6.12, -0.4, 'quadOut'], [6.6, 0.7], [7.15, -0.4], [8, -0.3]),
     lean: k('sineInOut', [0, 0], [2.3, 0], [2.7, -0.2], [3.3, 0.1], [3.7, 0.2], [4.3, -0.1], [4.7, -0.2], [5.3, 0.1], [5.7, 0.2], [6.3, -0.1], [7, 0], [8, 0]),
+    wingFold: k('sineInOut', [0, 0.35], [0.65, 0.55], [1.05, 0, 'backOut'], [1.7, 0.1], [2.1, 0.3], [7, 0.3], [8, 0.35]),
   },
   expression: [[0, 'determined'], [0.8, 'excited'], [2, 'joyful'], [5, 'excited'], [7, 'joyful']],
   events: [
@@ -285,6 +295,8 @@ const twist: Clip = {
     squash: k('sineInOut', [0, 0.05], [2, 0.35], [4, 0.6], [6, 0.35], [8, 0.05]),
     lean: rep(8, 2, [[0, 0.12], [1, -0.12]], 'sineInOut', 0.05),
     flap: rep(8, 1, [[0, -0.2], [0.5, 0.1]], 'sineInOut', 0.2),
+    // half-tucked: the body twists ±40°, open wings would sweep across it
+    wingFold: [[0, 0.55]],
   },
   expression: [[0, 'joyful'], [3, 'playful'], [5, 'joyful'], [7, 'singing']],
   events: [{ t: 7, effect: 'notes', at: 'head', params: { side: 1 } }, { t: 3, effect: 'notes', at: 'head', params: { side: -1 } }],
@@ -321,8 +333,8 @@ const moonwalk: Clip = {
     lean: k('sineInOut', [0, 0.18], [3.5, 0.18], [4, -0.18], [7.5, -0.18], [8, 0.18]),
     squash: rep(8, 1, [[0, 0.15], [0.5, -0.05]]),
     flap: rep(8, 1, [[0, -0.25], [0.5, -0.15]]),
+    wingFold: [[0, 1]],
   },
-  slots: { 'wing-l': [[0, 'folded']], 'wing-r': [[0, 'folded']] },
   expression: [[0, 'proud'], [3.6, 'wink'], [4.4, 'proud'], [7.6, 'wink']],
   events: [
     { t: 3.8, effect: 'sparkles', at: 'head', params: { count: 3 } },
@@ -350,6 +362,7 @@ const robot: Clip = {
   },
   params: {
     squash: pops(8, [[0, 0.2], [0.5, 0], [1, 0.2], [1.5, 0], [2, 0.2], [2.5, 0], [3, 0.2], [3.5, 0], [4, 0.2], [4.5, 0], [5, 0.2], [5.5, 0], [6, 0.2], [6.5, 0], [7, 0.2], [7.5, 0]], 0.06, 'quadOut'),
+    wingFold: pops(8, [[0, 0.3], [2, 0.15], [4, 0.3], [6, 0.15]], 0.08, 'quadOut'),
   },
   expression: [[0, 'unimpressed'], [4, 'determined'], [7, 'excited']],
   suppress: { look: true, fidget: true, breathe: true },
@@ -399,6 +412,7 @@ const disco: Clip = {
     lean: k('sineInOut', [0, 0.28], [0.5, -0.12], [1, -0.28], [1.5, 0.12], [2, 0.28], [2.5, -0.12], [3, -0.28], [3.5, 0.12],
       [4, -0.28], [4.5, 0.12], [5, 0.28], [5.5, -0.12], [6, -0.28], [6.5, 0.12], [7, 0.28], [7.5, -0.12], [8, 0.28]),
     squash: rep(8, 1, [[0, 0.25, 'quadOut'], [0.5, -0.08]]),
+    wingFold: [[0, 0.15]],
   },
   expression: [[0, 'proud'], [2, 'excited'], [4, 'proud'], [6, 'excited']],
   events: [
@@ -436,6 +450,7 @@ const headbang: Clip = {
   params: {
     squash: rep(8, 1, [[0, 0.42, 'quadOut'], [0.5, -0.12, 'quadIn']]),
     flap: rep(8, 1, [[0, -0.55, 'quadOut'], [0.55, 0.55, 'quadIn']], 'quadIn', 0.1),
+    wingFold: rep(8, 1, [[0, 0.4, 'quadOut'], [0.55, 0.1, 'quadIn']], 'quadIn', 0.1),
     lean: k('sineInOut', [0, 0], [4, 0], [4.5, 0.25], [5.5, -0.25], [6.5, 0.25], [7.5, -0.25], [8, 0]),
   },
   expression: [[0, 'determined'], [2, 'excited'], [4, 'determined'], [6, 'excited']],
@@ -460,8 +475,6 @@ const waveDance: Clip = {
   bpm: 104,
   duration: 8,
   bones: {
-    'wing-l': { rot: bumps(8, [[0.45, 46], [3.55, 46], [4.45, 46], [7.55, 46]], W) },
-    'wing-r': { rot: bumps(8, [[1.55, -46], [2.45, -46], [5.55, -46], [6.45, -46]], W) },
     body: { rot: bumps(8, [[0.7, 11], [1.3, -11], [2.7, -11], [3.3, 11], [4.7, 11], [5.3, -11], [6.7, -11], [7.3, 11]], 0.3) },
     head: {
       y: bumps(8, [[1, -18], [3, -18], [5, -18], [7, -18]], 0.35),
@@ -472,6 +485,10 @@ const waveDance: Clip = {
   params: {
     lookX: rep(8, 4, [[0, -0.6], [0.4, -0.6], [1.9, 0.6], [2.4, 0.6], [3.9, -0.6]]),
     squash: rep(8, 1, [[0, 0.18, 'quadOut'], [0.5, -0.06]]),
+    // the ripple enters and leaves through the wing tips: each wing rises and opens in turn
+    raiseL: bumps(8, [[0.45, 0.95], [3.55, 0.95], [4.45, 0.95], [7.55, 0.95]], W),
+    raiseR: bumps(8, [[1.55, 0.95], [2.45, 0.95], [5.55, 0.95], [6.45, 0.95]], W),
+    wingFold: [[0, 0.4]],
   },
   expression: [[0, 'happy'], [2, 'joyful'], [4, 'happy'], [6, 'joyful']],
   events: [
@@ -513,6 +530,8 @@ const jumpSpin: Clip = {
       [0, -0.1], [0.5, 0.25], [1, -0.1], [1.5, 0.25], [2, -0.1],
       [3, -0.9, 'backOut'], [3.35, 1.3], [4.2, 1.0], [AIR_LAND, -0.6, 'backOut'], [5.1, 1.15, 'backOut'], [6.1, 0.9],
       [6.6, 0.25], [7, -0.1], [7.5, 0.25], [8, -0.1]),
+    // wings tuck up for the airborne spin, open wide on the landing
+    wingFold: k('sineInOut', [0, 0.3], [2.1, 0.3], [3, 0.6], [3.35, 0.8], [4.3, 0.8], [AIR_LAND, 0.3], [5.1, 0, 'backOut'], [6.1, 0.1], [7, 0.3], [8, 0.3]),
   },
   expression: [[0, 'happy'], [2.2, 'determined'], [3.1, 'excited'], [AIR_LAND, 'proud'], [6.3, 'joyful']],
   events: [
@@ -548,6 +567,7 @@ const shimmy: Clip = {
     squash: rep(8, 2, [[0, -0.12], [1.4, 0.55, 'quadOut'], [1.8, 0.5, 'backIn']]),
     lean: rep(8, 4, [[0, 0.22], [2, -0.22]], 'sineInOut', 0.15),
     flap: rep(8, 2, [[0, 0.35], [1.4, -0.25]], 'sineInOut', 0.2),
+    wingFold: rep(8, 2, [[0, 0.25], [1.4, 0.45]], 'sineInOut', 0.2),
   },
   expression: [[0, 'playful'], [4, 'joyful']],
   events: [
@@ -579,6 +599,8 @@ const floss: Clip = {
   },
   params: {
     flap: rep(8, 1, [[0, -0.9], [0.25, -0.75], [0.5, -0.9], [0.75, -0.75]]),
+    // compact wings swing like arms in front of / behind the body
+    wingFold: [[0, 0.65]],
     lean: rep(8, 1, [[0, -0.25, 'quadInOut'], [0.5, 0.25, 'quadInOut']], 'quadInOut', 0.06),
     squash: rep(8, 0.5, [[0, 0.15, 'quadOut'], [0.25, -0.04]]),
   },
@@ -612,6 +634,7 @@ const groove: Clip = {
   params: {
     squash: rep(8, 1, [[0, 0.3, 'quadOut'], [0.35, -0.1]]),
     lean: rep(8, 2, [[0, -0.18], [1, 0.18]], 'sineInOut', 0.15),
+    wingFold: rep(8, 1, [[0, 0.45], [0.5, 0.3, 'backOut'], [0.75, 0.4]], 'sineInOut', 0.05),
   },
   expression: [[0, 'happy'], [2, 'singing'], [4, 'wink'], [5, 'happy'], [6, 'singing']],
   events: [{ t: 2, effect: 'notes', at: 'head', params: { side: 1 } }, { t: 6, effect: 'notes', at: 'head', params: { side: -1 } }],

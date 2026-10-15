@@ -3,8 +3,11 @@
  * react to the user. One-shots return to idle; `listen` and `think` loop
  * while the app waits. See docs/animation.md.
  *
- * Wing conventions (Echo-style rigs): `wing-r` is the screen-right wing;
- * its `rot` goes negative to raise it. `wing-l` mirrors that (positive = up).
+ * Wings are driven through portable params where possible: `raiseR` /
+ * `raiseL` lift (and open) one wing, `wingFold` opens (0) or tucks (1) both,
+ * `flap` sweeps both up/down. Clips rest at wingFold 0.5 (relaxed). Extra
+ * bone channels on `wing-r`/`wing-l` (rot, yaw, x) only add flourish:
+ * `wing-r` is the screen-right wing; its `rot` goes negative to raise it.
  */
 import { defineClip, defineClips, keys, mirrorClip } from '@openmascot/core';
 import type { Keyframe } from '@openmascot/core';
@@ -30,10 +33,12 @@ const pointRight = defineClip({
     lookX: keys('sineInOut', [0, 0], [0.12, -0.1], [0.32, 0.85, 'backOut'], [1.3, 0.8], [1.7, 0]),
     lookY: keys('sineInOut', [0, 0], [0.32, 0.05], [1.7, 0]),
     squash: keys('sineInOut', [0, 0], [0.14, 0.18], [0.32, -0.1], [0.5, 0], [1.7, 0]),
+    // open the pointing wing; bone rot below lowers it to horizontal
+    raiseR: keys('sineInOut', [0, 0], [0.14, 0.2], [0.32, 0.55, 'backOut'], [1.3, 0.55], [1.7, 0]),
   },
   bones: {
     'wing-r': {
-      rot: keys('sineInOut', [0, 0], [0.14, -12], [0.32, 26, 'backOut'], [0.62, 22], [0.78, 28], [1.3, 24], [1.7, 0]),
+      rot: keys('sineInOut', [0, 0], [0.14, -2], [0.32, 50, 'backOut'], [0.62, 46], [0.78, 52], [1.3, 48], [1.7, 0]),
       x: keys('sineInOut', [0, 0], [0.14, -4], [0.32, 12, 'backOut'], [0.62, 9], [0.78, 13], [1.3, 12], [1.7, 0]),
       sx: keys('sineInOut', [0, 1], [0.32, 1.1, 'backOut'], [1.3, 1.08], [1.7, 1]),
     },
@@ -70,10 +75,10 @@ export const gesturesClips = defineClips({
     params: {
       lean: keys('sineInOut', [0, 0], [0.25, -0.15], [1.5, -0.12], [1.9, 0]),
       squash: keys('sineInOut', [0, 0], [0.1, 0.15], [0.28, -0.1], [0.5, 0], [1.9, 0]),
+      raiseR: [[0, 0, 'backOut'], [0.28, 1, 'sineInOut'], ...waveKeys(0.36, 4, 0.28, 0.5, 1.16), [1.5, 0.92, 'sineInOut'], [1.9, 0]],
     },
     bones: {
       'wing-r': {
-        rot: [[0, 0, 'backOut'], [0.28, -50, 'sineInOut'], ...waveKeys(0.36, 4, 0.28, -24, -58), [1.5, -46, 'sineInOut'], [1.9, 0]],
         yaw: [[0, 0, 'sineInOut'], [0.28, 0, 'sineInOut'], ...waveKeys(0.36, 4, 0.28, -25, 10), [1.5, 0, 'sineInOut']],
         x: keys('sineInOut', [0, 0], [0.28, 10], [1.5, 10], [1.9, 0]),
       },
@@ -190,10 +195,10 @@ export const gesturesClips = defineClips({
     params: {
       squash: keys('sineInOut', [0, 0], [0.12, 0.25], [0.3, -0.2, 'backOut'], [0.46, 0.15], [0.62, -0.2, 'backOut'], [0.85, 0.05], [1.2, 0]),
       lean: keys('sineInOut', [0, 0], [0.3, -0.12], [0.62, -0.15], [1.2, -0.05], [1.6, 0]),
+      raiseR: keys('sineInOut', [0, 0], [0.12, -0.16], [0.3, 1.16, 'backOut'], [0.46, 0.6], [0.62, 1.24, 'backOut'], [1.1, 1], [1.6, 0]),
     },
     bones: {
       'wing-r': {
-        rot: keys('sineInOut', [0, 0], [0.12, 8], [0.3, -58, 'backOut'], [0.46, -30], [0.62, -62, 'backOut'], [1.1, -50], [1.6, 0]),
         sx: keys('sineInOut', [0, 1], [0.3, 0.85], [0.46, 0.95], [0.62, 0.85], [1.1, 0.9], [1.6, 1]),
       },
       'wing-l': { rot: keys('sineInOut', [0, 0], [0.3, -10], [1.2, -8], [1.6, 0]) },
@@ -217,6 +222,7 @@ export const gesturesClips = defineClips({
     params: {
       squash: keys('sineInOut', [0, 0], [0.08, 0.35, 'quadOut'], [0.2, -0.4], [0.36, -0.05], [0.48, 0.3, 'quadOut'], [0.62, -0.08], [0.8, 0]),
       flap: keys('sineInOut', [0, 0], [0.08, -0.4], [0.22, 1.15, 'backOut'], [0.4, 0.6], [0.5, -0.15], [0.7, 0.25], [1.05, 0]),
+      wingFold: keys('sineInOut', [0, 0.5], [0.08, 0.55], [0.22, 0.05, 'backOut'], [0.6, 0.2], [1.05, 0.5]),
       lookY: keys('sineInOut', [0, 0], [0.24, -0.2], [0.5, 0.15], [0.7, 0], [1.05, 0]),
     },
     bones: {
@@ -290,6 +296,7 @@ export const gesturesClips = defineClips({
     params: {
       squash: keys('sineInOut', [0, 0], [0.16, 0.55, 'quadOut'], [0.3, -0.5], [0.5, -0.15], [0.72, 0.5, 'quadOut'], [0.86, -0.15], [1.0, 0.05], [1.15, 0]),
       flap: keys('sineInOut', [0, 0], [0.16, -0.5], [0.32, 1.2, 'backOut'], [0.56, 0.5], [0.7, -0.4], [0.86, 0.35], [1.15, 0]),
+      wingFold: keys('sineInOut', [0, 0.5], [0.16, 0.6], [0.32, 0, 'backOut'], [0.7, 0.2], [1.15, 0.5]),
       lookY: keys('sineInOut', [0, 0], [0.16, 0.15], [0.45, -0.2], [0.72, 0.1], [1.0, 0]),
     },
     bones: {
@@ -312,6 +319,8 @@ export const gesturesClips = defineClips({
     params: {
       squash: keys('sineInOut', [0, 0], [0.12, 0.15], [0.35, -0.12], [0.7, 0.08], [0.85, 0], [1.6, 0], [1.72, 0.12], [1.95, -0.1], [2.3, 0.06], [2.6, 0]),
       flap: keys('sineInOut', [0, 0], [0.4, 0.3], [0.8, 0], [1.4, 0.15], [1.95, 0.3], [2.4, 0]),
+      // tuck a little while turning so the wings don't sweep across the body
+      wingFold: keys('sineInOut', [0, 0.5], [0.3, 0.7], [0.75, 0.55], [1.65, 0.55], [1.9, 0.7], [2.35, 0.5]),
     },
     bones: {
       root: {
@@ -335,6 +344,8 @@ export const gesturesClips = defineClips({
       squash: keys('sineInOut', [0, -0.2], [0.72, -0.3], [0.82, 0.5, 'quadOut'], [0.98, -0.15], [1.12, 0.06], [1.3, 0], [3.2, 0]),
       lean: keys('sineInOut', [0, -0.3], [0.7, -0.15], [0.84, 0.15], [1.1, 0], [1.3, -0.12], [2.8, -0.1], [3.2, 0]),
       lookX: keys('sineInOut', [0, -0.5], [0.6, -0.3], [0.9, 0], [3.2, 0]),
+      wingFold: keys('sineInOut', [0, 0], [0.84, 0.05], [1.15, 0.5], [3.2, 0.5]),
+      raiseR: [[0, 0, 'sineInOut'], [1.15, 0, 'backOut'], [1.4, 0.96, 'sineInOut'], ...waveKeys(1.5, 4, 0.3, 0.56, 1.04), [2.7, 0.88, 'sineInOut'], [3.15, 0]],
     },
     bones: {
       root: {
@@ -343,7 +354,6 @@ export const gesturesClips = defineClips({
         yaw: keys('sineInOut', [0, -35], [0.55, -25], [0.85, 0, 'backOut'], [3.2, 0]),
       },
       'wing-r': {
-        rot: [[0, 0, 'sineInOut'], [1.15, 0, 'backOut'], [1.4, -48, 'sineInOut'], ...waveKeys(1.5, 4, 0.3, -28, -52), [2.7, -44, 'sineInOut'], [3.15, 0]],
         yaw: [[0, 0, 'sineInOut'], [1.4, 0, 'sineInOut'], ...waveKeys(1.5, 4, 0.3, -30, 18), [2.7, 0, 'sineInOut']],
       },
       head: { rot: keys('sineInOut', [0, 0], [1.1, 0], [1.45, 8], [2.0, 5], [2.5, 9], [3.2, 0]) },

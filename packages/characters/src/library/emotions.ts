@@ -445,6 +445,8 @@ export const emotionsClips = defineClips({
         rot: keys('backOut', [0, 0], [0.32, 15], [0.92, 13, 'sineInOut'], [1.2, -12, 'backOut'], [1.9, -10, 'sineInOut'], [2.3, 0]),
         x: keys('sineInOut', [0, 0], [0.32, 3], [0.92, 3], [1.2, -3], [1.9, -3], [2.3, 0]),
       },
+      // scratching: a little 3D wrist wiggle on the raised wing
+      'wing-r': { yaw: keys('sineInOut', [0, 0], [1.15, 0], [1.3, -14], [1.42, 6], [1.54, -14], [1.66, 6], [1.78, -8], [2.1, 0]) },
     },
     events: [{ t: 0.3, effect: 'question', at: 'head', params: { side: 1 } }],
   },
