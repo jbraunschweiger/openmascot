@@ -10,6 +10,7 @@ export const echoClips: Record<string, Clip> = defineClips({
     category: 'pose',
     duration: 3.2,
     loop: true,
+    shadow: 0,
     fadeIn: 0.35,
     slots: folded(),
     bones: {
@@ -112,6 +113,7 @@ export const echoClips: Record<string, Clip> = defineClips({
     category: 'pose',
     duration: 4,
     loop: true,
+    shadow: 0,
     fadeIn: 0.4,
     slots: folded(),
     params: {
@@ -153,6 +155,7 @@ export const echoClips: Record<string, Clip> = defineClips({
     category: 'locomotion',
     duration: 1.12,
     fadeIn: 0.15,
+    then: 'fly',
     expression: [[0.05, 'excited']],
     params: {
       squash: keys('sineInOut', [0, 0], [0.22, 0.55, 'quadOut'], [0.36, -0.55], [0.6, -0.15], [0.9, -0.1], [1.12, 0.08]),

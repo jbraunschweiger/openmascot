@@ -282,6 +282,12 @@ export interface Clip {
   suppress?: { blink?: boolean; breathe?: boolean; look?: boolean; fidget?: boolean };
   /** Seconds of crossfade used when transitioning *into* this clip (default 0.25). */
   fadeIn?: number;
+  /** One-shots: clip that follows by default (`null` = hold the last frame). Default: the idle clip. */
+  then?: string | null;
+  /** Shadow opacity multiplier while this clip plays (0 for hanging/peeking poses). Default 1. */
+  shadow?: number;
+  /** Hide eye-art swaps behind an automatic blink. Default true. */
+  blinkMask?: boolean;
 }
 
 export interface ClipContext {

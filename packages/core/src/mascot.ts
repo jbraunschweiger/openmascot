@@ -210,7 +210,7 @@ export class Mascot {
       weight: fade > 0 ? 0 : 1,
       target: 1,
       fadeRate: fade > 0 ? 1 / fade : Infinity,
-      then: opts.then === undefined ? this.idleClip : opts.then,
+      then: opts.then !== undefined ? opts.then : clip.then !== undefined ? clip.then : this.idleClip,
       ended: false,
       ctx: { duration: clip.duration, secondsPerUnit: spu, random: rng(seed) },
     };
@@ -384,6 +384,17 @@ export class Mascot {
     }
   }
 
+  /** Weighted blend of the playing clips' `shadow` multipliers. */
+  private shadowFactor(): number {
+    let w = 0;
+    let v = 0;
+    for (const t of this.tracks) {
+      w += t.weight;
+      v += t.weight * (t.clip.shadow ?? 1);
+    }
+    return w > 0 ? v / w : 1;
+  }
+
   private dominantClip(): Clip | undefined {
     let best: Track | undefined;
     for (const t of this.tracks) if (!best || t.weight >= best.weight) best = t;
@@ -478,7 +489,7 @@ export class Mascot {
     const resolved = resolvePose(this.character, this.rig, pose);
 
     // Mask eye-art swaps behind a blink, like a traditional animator would.
-    const slots = this.maskSlotChange(resolved.slots, !!params.blink && !sup.blink, blink);
+    const slots = this.maskSlotChange(resolved.slots, !!params.blink && !sup.blink && dom?.blinkMask !== false, blink);
     if (this.pendingSlots && blink >= 0.7) {
       this.committedSlots = this.pendingSlots;
       this.pendingSlots = null;
@@ -494,7 +505,7 @@ export class Mascot {
         c.x += root.x;
         c.sx *= (1 - lift * 0.55) * root.sx;
         c.sy *= 1 - lift * 0.4;
-        c.opacity *= 1 - lift * 0.7;
+        c.opacity *= (1 - lift * 0.7) * this.shadowFactor();
         resolved.channels.set(sb.name, c);
       }
     }

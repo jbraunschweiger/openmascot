@@ -463,7 +463,7 @@ export const emotionsClips = defineClips({
     },
     events: [
       { t: 0.52, effect: 'confetti', at: 'head' },
-      { t: 1.4, effect: 'sparkles', at: 'head', params: { count: 4 } },
+      { t: 1.4, effect: 'stars', at: 'head', params: { count: 5 } },
     ],
   },
 });

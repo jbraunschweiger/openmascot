@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { addChannel, addParam, blendPoses, clonePose, emptyPose, layerPose, piecewise, resolvePose, setChannel } from '../src/pose';
+import { addChannel, addParam, blendPoses, clonePose, emptyPose, layerPose, piecewise, resolvePose, setChannel, wrap180 } from '../src/pose';
 import { compileRig } from '../src/rig';
 import type { Pose } from '../src/types';
 import { REST } from '../src/types';
@@ -62,6 +62,14 @@ describe('blendPoses', () => {
     expect(hi.slots).toEqual({ mouth: 'b', eye: 'a' });
   });
 
+  it('blends rot/yaw the shortest way round', () => {
+    const spun = pose({ bones: { root: { yaw: 360, rot: 350 } } });
+    const m = blendPoses(spun, pose({}), 0.5);
+    expect(m.bones.root.yaw).toBeCloseTo(360); // 360 → 0 is no turn at all
+    expect(m.bones.root.rot).toBeCloseTo(355); // 350 → 360 (= 0), not back through 175
+    expect(blendPoses(pose({ bones: { h: { x: 360 } } }), pose({}), 0.5).bones.h.x).toBe(180); // linear channels unaffected
+  });
+
   it('keeps the other expression when the dominant pose has none', () => {
     expect(blendPoses(a, pose({}), 0.9).expression).toBe('happy');
   });
@@ -84,6 +92,18 @@ describe('layerPose', () => {
     const full = layerPose(pose({ expression: 'happy' }), add);
     expect(full.slots).toEqual({ mouth: 'o' });
     expect(full.expression).toBe('sad');
+  });
+});
+
+describe('wrap180', () => {
+  it('wraps into (-180, 180]', () => {
+    expect(wrap180(0)).toBe(0);
+    expect(wrap180(190)).toBe(-170);
+    expect(wrap180(-190)).toBe(170);
+    expect(wrap180(360)).toBe(0);
+    expect(wrap180(-180)).toBe(180);
+    expect(wrap180(180)).toBe(180);
+    expect(wrap180(720 + 45)).toBe(45);
   });
 });
 
