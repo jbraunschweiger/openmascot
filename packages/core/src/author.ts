@@ -109,6 +109,13 @@ export function sequence(name: string, parts: Clip[], opts: Partial<Clip> = {}):
   for (const p of parts) for (const b in p.bones ?? {}) for (const ch in p.bones![b]) used.add(`${b}\u0000${ch}`);
   const usedParams = new Set<string>();
   for (const p of parts) for (const pr in p.params ?? {}) usedParams.add(pr);
+  const usedSlots = new Set<string>();
+  for (const p of parts) for (const sl in p.slots ?? {}) usedSlots.add(sl);
+  const usesExpr = parts.some((p) => p.expression?.length);
+  const bpms = new Set(parts.filter((p) => p.units === 'beats').map((p) => p.bpm ?? 120));
+  if (bpms.size > 1 && opts.bpm === undefined) {
+    console.warn(`[openmascot] sequence("${name}"): parts have different bpm (${[...bpms].join(', ')}); using ${parts[0]?.bpm}. Pass { bpm } to choose.`);
+  }
   let offset = 0;
   const fns: { fn: NonNullable<Clip['fn']>; start: number; end: number }[] = [];
   for (const p of parts) {
@@ -133,6 +140,9 @@ export function sequence(name: string, parts: Clip[], opts: Partial<Clip> = {}):
       const arr = (out.params![pr] ??= []);
       for (const k of p.params![pr]) arr.push([k[0] + offset, k[1], ...(k.length > 2 ? [k[2]] : [])] as Keyframe);
     }
+    // Reset discrete state at part boundaries so e.g. folded wings don't leak.
+    for (const s of usedSlots) if (!p.slots?.[s]?.some(([t]) => t <= 0)) (out.slots![s] ??= []).push([offset, '']);
+    if (usesExpr && !p.expression?.some(([t]) => t <= 0)) out.expression!.push([offset, 'neutral']);
     for (const s in p.slots ?? {}) {
       const arr = (out.slots![s] ??= []);
       for (const [t, v] of p.slots![s]) arr.push([t + offset, v]);

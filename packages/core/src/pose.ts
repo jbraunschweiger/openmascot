@@ -55,7 +55,10 @@ export function blendPoses(a: Pose, b: Pose, w: number): Pose {
       const vb = bb?.[ch];
       if (va === undefined && vb === undefined) continue;
       const ra = va ?? REST[ch];
-      const rb = vb ?? REST[ch];
+      let rb = vb ?? REST[ch];
+      // Angles take the shortest way round, so leaving a spin held at 360°
+      // doesn't visibly unwind back to 0°.
+      if (ch === 'yaw' || ch === 'rot') rb = ra + wrap180(rb - ra);
       o[ch] = ra + (rb - ra) * w;
     }
     out.bones[n] = o;
@@ -160,4 +163,10 @@ export function piecewise(curve: [number, number][], x: number): number {
     }
   }
   return curve[curve.length - 1][1];
+}
+
+/** Wrap an angle difference into (-180, 180]. */
+export function wrap180(d: number): number {
+  d = ((d + 180) % 360 + 360) % 360 - 180;
+  return d === -180 ? 180 : d;
 }

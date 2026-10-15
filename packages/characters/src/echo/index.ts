@@ -90,8 +90,9 @@ export const echo: CharacterDef = {
       min: -1.5,
       max: 1.5,
       drives: [
-        { bone: 'wing-l', channel: 'rot', k: 34 },
-        { bone: 'wing-r', channel: 'rot', k: -34 },
+        // Linear to ±1, then wings sweep much higher for "wings overhead" poses.
+        { bone: 'wing-l', channel: 'rot', curve: [[-1.5, -48], [0, 0], [1, 34], [1.5, 68]] },
+        { bone: 'wing-r', channel: 'rot', curve: [[-1.5, 48], [0, 0], [1, -34], [1.5, -68]] },
         { bone: 'wing-l', channel: 'sx', curve: [[-1, -0.28], [0, 0], [1, -0.08]] },
         { bone: 'wing-r', channel: 'sx', curve: [[-1, -0.28], [0, 0], [1, -0.08]] },
       ],

@@ -17,7 +17,7 @@
  * character that follows the standard rig conventions.
  */
 import { defineClips, mirrorClip, sampleTrack, sequence } from '@openmascot/core';
-import type { Clip, Ease, EffectEvent, Keyframe } from '@openmascot/core';
+import type { Clip, Ease, Keyframe } from '@openmascot/core';
 
 /* ------------------------------------------------------------------ */
 /* Authoring helpers                                                   */
@@ -79,17 +79,6 @@ function pops(total: number, poses: [number, number][], snap = 0.1, ease: Ease =
     prev = v;
   }
   if (out[out.length - 1]![0] < total) out.push([total, prev, 'linear']);
-  return out;
-}
-
-/** Same effect every `period` beats starting at `start`. */
-function every(total: number, period: number, start: number, ev: Omit<EffectEvent, 't'>, alternateSide = false): EffectEvent[] {
-  const out: EffectEvent[] = [];
-  let i = 0;
-  for (let t = start; t < total - 1e-9; t += period, i++) {
-    const params = alternateSide ? { ...ev.params, side: i % 2 ? -1 : 1 } : ev.params;
-    out.push({ ...ev, t, params });
-  }
   return out;
 }
 
@@ -368,13 +357,12 @@ const robot: Clip = {
 };
 
 /* Disco: point up-right / down-left with one wing (Saturday-night style), hips sway; other wing for the second half. */
-function discoHalf(start: number, wingRot: [number, number], restRot: number): Keyframe[] {
+function discoHalf(start: number, wingRot: [number, number]): Keyframe[] {
   // wingRot = [pointUp, pointDown] for the pointing wing
   const out: Keyframe[] = [];
   for (let b = 0; b < 4; b += 2) {
     out.push([start + b, wingRot[0], 'backOut'], [start + b + 0.7, wingRot[0], 'quadInOut'], [start + b + 1, wingRot[1], 'backOut'], [start + b + 1.7, wingRot[1], 'quadInOut']);
   }
-  void restRot;
   return out;
 }
 const disco: Clip = {
@@ -385,14 +373,14 @@ const disco: Clip = {
   bones: {
     'wing-r': {
       rot: [
-        ...discoHalf(0, [-78, 46], 0),
+        ...discoHalf(0, [-78, 46]),
         [3.7, 46, 'quadInOut'], [4, 12], [8, 12, 'quadInOut'],
       ] as Keyframe[],
     },
     'wing-l': {
       rot: [
         [0, -12, 'quadInOut'], [3.7, -12, 'quadInOut'],
-        ...discoHalf(4, [78, -46], 0),
+        ...discoHalf(4, [78, -46]),
         [7.7, -46, 'quadInOut'], [8, -12],
       ] as Keyframe[],
     },
@@ -580,11 +568,11 @@ const floss: Clip = {
       y: rep(8, 0.5, [[0, 0, 'quadOut'], [0.25, -3, 'quadIn']]),
     },
     'wing-l': {
-      rot: rep(8, 1, [[0, -26, 'quadInOut'], [0.5, 26, 'quadInOut']], 'quadInOut', 0.04),
+      rot: rep(8, 1, [[0, -34, 'quadInOut'], [0.5, 34, 'quadInOut']], 'quadInOut', 0.04),
       dz: rep(8, 2, [[0, 50], [0.9, 50, 'quadInOut'], [1.1, -10], [1.9, -10, 'quadInOut']]),
     },
     'wing-r': {
-      rot: rep(8, 1, [[0, -26, 'quadInOut'], [0.5, 26, 'quadInOut']], 'quadInOut', 0.04),
+      rot: rep(8, 1, [[0, -34, 'quadInOut'], [0.5, 34, 'quadInOut']], 'quadInOut', 0.04),
       dz: rep(8, 2, [[0, -10], [0.9, -10, 'quadInOut'], [1.1, 50], [1.9, 50, 'quadInOut']]),
     },
     head: { rot: rep(8, 1, [[0, -5], [0.5, 5]], 'sineInOut', 0.12) },
@@ -635,6 +623,7 @@ const groove: Clip = {
 
 const spinLeft = mirrorClip(spin);
 const jumpSpinLeft = mirrorClip(jumpSpin);
+const robotLeft = mirrorClip(robot);
 
 /** Re-time a move to a shared tempo (sequence() uses the first part's bpm). */
 const at = (c: Clip, bpm: number): Clip => ({ ...c, bpm });
@@ -649,7 +638,7 @@ const party: Clip = sequence(
     events: [
       { t: 8 + SPIN_END + 0.1, effect: 'confetti', at: 'head', params: { count: 14 } },
       { t: 24 + AIR_LAND + 0.05, effect: 'confetti', at: 'head', params: { count: 30 } },
-      ...every(32, 8, 4, { effect: 'notes', at: 'head' }, true),
+      { t: 28.5, effect: 'notes', at: 'head', params: { side: -1, count: 3 } },
     ],
   },
 );
@@ -664,6 +653,7 @@ export const dancesClips = defineClips({
   'dance-twist': twist,
   'dance-moonwalk': moonwalk,
   'dance-robot': robot,
+  'dance-robot-left': { ...robotLeft, description: 'Mirror of dance-robot: the same pops, starting to the other side.' },
   'dance-disco': disco,
   'dance-headbang': headbang,
   'dance-wave': waveDance,

@@ -4,7 +4,8 @@
  *
  *   openmascot validate <character|file.svg>
  *   openmascot list [character]
- *   openmascot framesheet <character> <clip> [--frames 12] [--cols 6] [--from idle] [--bpm 120] [--out out/x.png]
+ *   openmascot framesheet <character> <clip> [--frames 12] [--cols 6] [--from idle] [--bpm 120]
+ *        [--start s] [--duration s] [--per-beat 4] [--padding 70] [--out out/x.png]
  *   openmascot framesheet <character> --expressions
  *   openmascot framesheet <character> --sweep root.yaw [--range 0,360] | --param lookX --range -1,1
  *   openmascot render <character> [--clip idle] [--time 0.5] [--expression happy] [--out out/x.svg|png]
@@ -130,6 +131,9 @@ async function main() {
           cols: num('cols', 6),
           tile: num('tile', 220),
           duration: flag('duration') ? Number(flag('duration')) : undefined,
+          start: num('start', 0),
+          perBeat: flag('per-beat') ? Number(flag('per-beat')) : undefined,
+          padding: flag('padding') ? Number(flag('padding')) : undefined,
           warmup: num('warmup', 0),
           bpm: flag('bpm') ? Number(flag('bpm')) : undefined,
           from: flag('from'),

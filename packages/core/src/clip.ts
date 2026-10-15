@@ -71,8 +71,10 @@ export function sampleClip(clip: Clip, t: number, ctx: ClipContext, out: Pose = 
   }
   if (clip.slots) {
     for (const s in clip.slots) {
+      // An empty string means "no override" (fall back to expression/default).
       const v = sampleStep(clip.slots[s], t);
       if (v) out.slots[s] = v;
+      else if (v === '') delete out.slots[s];
     }
   }
   clip.fn?.(t, out, ctx);

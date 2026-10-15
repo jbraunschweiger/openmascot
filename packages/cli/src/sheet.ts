@@ -48,6 +48,10 @@ export interface ClipSheetOptions extends SheetOptions {
   frames?: number;
   /** Seconds to sample (default: clip length). */
   duration?: number;
+  /** Seconds into the clip where sampling starts. Default 0. */
+  start?: number;
+  /** Sample on beats instead of evenly: N frames per beat (beat clips only). */
+  perBeat?: number;
   /** Seconds to simulate before the first sample (lets springs settle). Default 0. */
   warmup?: number;
   fps?: number;
@@ -85,12 +89,19 @@ export function clipFrames(character: CharacterDef, clip: string, opts: ClipShee
   step(opts.warmup ?? 0);
   const c = m.clips[clip];
   const spu = c?.units === 'beats' ? 60 / (opts.bpm ?? c.bpm ?? 120) : 1;
-  const total = opts.duration ?? (c ? c.duration * spu : 2);
-  const frames = Math.max(1, opts.frames ?? 12);
+  const start = opts.start ?? 0;
+  const total = opts.duration ?? (c ? c.duration * spu - start : 2);
+  let frames = Math.max(1, opts.frames ?? 12);
+  let stepSec = frames === 1 ? 0 : total / (frames - 1);
+  if (opts.perBeat && c?.units === 'beats') {
+    stepSec = spu / opts.perBeat;
+    frames = Math.floor(total / stepSec + 1e-6) + 1;
+  }
   const out: { time: number; frame: MascotFrame; mascot: Mascot }[] = [];
-  let last = 0;
+  step(start);
+  let last = start;
   for (let i = 0; i < frames; i++) {
-    const at = frames === 1 ? 0 : (i * total) / (frames - 1);
+    const at = start + i * stepSec;
     step(at - last);
     last = at;
     out.push({ time: at, frame: m.update(0), mascot: m });
@@ -101,7 +112,7 @@ export function clipFrames(character: CharacterDef, clip: string, opts: ClipShee
 export function clipSheet(character: CharacterDef, clip: string, opts: ClipSheetOptions = {}): string {
   const frames = clipFrames(character, clip, opts);
   const m = frames[0]?.mascot;
-  const pad = opts.padding ?? 50;
+  const pad = opts.padding ?? 70;
   const tiles = frames.map((f) => ({
     label: `${f.time.toFixed(2)}s`,
     svg: renderSvg(m.rig, f.frame.frame, { padding: pad, particles: f.frame.particles }),
