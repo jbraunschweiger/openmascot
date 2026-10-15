@@ -52,6 +52,19 @@ First public version.
   coding agents.
 - **CI**: checks, lint, playground build and frame-sheet artifacts on every
   push and pull request; GitHub Pages deployment of the playground.
+- **npm packages**: `@openmascot/core`, `web`, `react`, `characters` and
+  `cli` are built with tsup — ESM + CommonJS, `.d.ts` (types-first `exports`,
+  checked with publint and are-the-types-wrong) and sourcemaps; `sideEffects:
+  false`; `@openmascot/react` is marked `'use client'`. The CLI is a single
+  bundled executable (`npx @openmascot/cli`), depending only on
+  `@resvg/resvg-js`.
+- **Per-character imports**: `@openmascot/characters/echo` (and `/pip`,
+  `/riff`, `/library`) so apps bundle only the characters they use.
+- **Release tooling**: Changesets (all packages versioned together), a
+  release workflow that opens version PRs and publishes with npm provenance,
+  `pnpm size`, and `pnpm smoke:pack`, which tests the packed tarballs in a
+  fresh project (Node ESM/CJS, SSR, Vite + React, TypeScript bundler/node16,
+  the CLI via npx, the custom element in Chromium) — also run in CI.
 
 ### Fixed
 

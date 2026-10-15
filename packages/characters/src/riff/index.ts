@@ -100,8 +100,10 @@ export const riff: CharacterDef = {
       min: -1.5,
       max: 1.5,
       drives: [
-        { bone: 'arm-l', channel: 'rot', curve: [[-1.5, -30], [0, 0], [1, 70], [1.5, 130]] },
-        { bone: 'arm-r', channel: 'rot', curve: [[-1.5, 30], [0, 0], [1, -70], [1.5, -130]] },
+        { bone: 'arm-l', channel: 'rot', curve: [[-1.5, -20], [-1, -14], [0, 0], [1, 70], [1.5, 130]] },
+        { bone: 'arm-r', channel: 'rot', curve: [[-1.5, 20], [-1, 14], [0, 0], [1, -70], [1.5, -130]] },
+        { bone: 'arm-l', channel: 'y', curve: [[-1.5, -10], [-1, -7], [0, 0]] },
+        { bone: 'arm-r', channel: 'y', curve: [[-1.5, -10], [-1, -7], [0, 0]] },
         { bone: 'arm-l', channel: 'dz', curve: [[-1.5, 30], [0, 0]] },
         { bone: 'arm-r', channel: 'dz', curve: [[-1.5, 30], [0, 0]] },
         { bone: 'foot-l', channel: 'rot', curve: [[0, 0], [1, -20], [1.5, -40]] },

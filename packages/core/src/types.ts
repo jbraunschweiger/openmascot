@@ -80,6 +80,22 @@ export interface SpringDef {
   damping: number;
   /** Absolute rest position of the spring's centre of mass. */
   tip: [number, number];
+  /**
+   * Optional `[min, max]` limits (degrees, in the bone's local unmirrored
+   * sense: + = clockwise) for the spring's extra rotation
+   * (`data-om-spring-limit`). Default ±55°.
+   */
+  limit?: [number, number];
+}
+
+/**
+ * A pinned point (`data-om-pin`): the rest point `at` (absolute coordinates)
+ * of the pinned bone's art is glued to wherever bone `bone`'s current world
+ * transform carries that same rest point.
+ */
+export interface PinDef {
+  bone: string;
+  at: [number, number];
 }
 
 /** A node of the compiled rig tree. */
@@ -98,6 +114,20 @@ export interface BoneNode {
   normal: [number, number];
   spring?: SpringDef;
   shadow?: boolean;
+  /**
+   * Depth used only for draw-order sorting among siblings (`data-om-sort-z`),
+   * in place of `z`. Parallax and perspective still use `z`. Lets a big
+   * volume (a head on a body) sort by the surface that actually overlaps its
+   * neighbours instead of by its pivot.
+   */
+  sortZ?: number;
+  /**
+   * Skin constraint (`data-om-pin`): one or two points of this bone's art
+   * pinned to points carried by other bones. One pin rotates + stretches the
+   * bone about its pivot; two pins give the exact affine map of the triangle
+   * (pivot, pin 1, pin 2) — membranes that stay attached to body and limb.
+   */
+  pin?: PinDef[];
   /** Extra attributes copied from the source `<g>` (minus data-om-*). */
   attrs: Record<string, string>;
   children: RigNode[];

@@ -106,6 +106,32 @@ switch (cmd) {
     );
     break;
   }
+  case 'multi': {
+    // Several clips stacked into one PNG: multi <out-name> clipA clipB … [--frames 10] [--from idle]
+    const [out, ...names] = rest;
+    const sheets = names.map((name) =>
+      clipSheet(pip, name, {
+        frames: +(flags.frames ?? 10),
+        cols: +(flags.frames ?? 10),
+        tile: +(flags.tile ?? 130),
+        padding: 60,
+        from: flags.from,
+        perBeat: flags['per-beat'] ? +flags['per-beat'] : undefined,
+      }),
+    );
+    let y = 0;
+    let w = 0;
+    let body = '';
+    for (const s of sheets) {
+      const W = +/width="(\d+)"/.exec(s)![1];
+      const H = +/height="(\d+)"/.exec(s)![1];
+      body += s.replace('<svg', `<svg y="${y}"`).replace(/ xmlns="[^"]*"/, '');
+      y += H;
+      w = Math.max(w, W);
+    }
+    png(`<svg xmlns="http://www.w3.org/2000/svg" width="${w}" height="${y}" viewBox="0 0 ${w} ${y}"><rect width="${w}" height="${y}" fill="#fff"/>${body}</svg>`, out);
+    break;
+  }
   case 'compare': {
     // Rest pose at the same scale as the reference crop (0.85 units per px).
     const m = new Mascot(pip, { alive: false, initial: '__none__' });

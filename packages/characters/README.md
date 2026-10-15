@@ -3,8 +3,28 @@
 Ready-made [OpenMascot](../../README.md) characters and the shared clip library.
 
 ```bash
-npm install @openmascot/characters   # (0.1.0, not yet published)
+npm install @openmascot/characters
+# or: pnpm add @openmascot/characters
+# or: yarn add @openmascot/characters
 ```
+
+Import one character from its subpath so the others stay out of your bundle:
+
+```ts
+import { echo } from '@openmascot/characters/echo';
+import { library, clipCategories } from '@openmascot/characters/library';
+```
+
+| import | contents | min+gzip |
+|---|---|---:|
+| `@openmascot/characters/echo` | Echo (art, expressions, clips incl. the shared library) | 20.8 kB |
+| `@openmascot/characters/pip` | Pip | 20.6 kB |
+| `@openmascot/characters/riff` | Riff | 23.0 kB |
+| `@openmascot/characters/library` | the shared clip library only | 12.3 kB |
+| `@openmascot/characters` | everything, plus a `characters` record by id | sum of the above, shared library counted once |
+
+Sizes include the 12.3 kB library, which bundlers share between characters.
+The root import is convenient for pickers and galleries:
 
 ```ts
 import { echo, library, clipCategories, characters } from '@openmascot/characters';

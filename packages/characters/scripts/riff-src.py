@@ -192,6 +192,64 @@ def poly(pts):
     return P(("M", *pts[0]), *[("L", *p) for p in pts[1:]], ("Z",))
 
 
+def sample_path(d, per_seg=24):
+    """Sample an absolute M/C/Z path into points."""
+    toks = re.findall(r"[MCZ]|-?\d*\.?\d+", d)
+    pts, i, cur = [], 0, None
+    while i < len(toks):
+        t = toks[i]
+        if t == "M":
+            cur = (float(toks[i + 1]), float(toks[i + 2]))
+            pts.append(cur)
+            i += 3
+        elif t == "C":
+            x1, y1, x2, y2, x, y = map(float, toks[i + 1:i + 7])
+            for k in range(1, per_seg + 1):
+                u = k / per_seg
+                a, b, c, e = (1 - u) ** 3, 3 * (1 - u) ** 2 * u, 3 * (1 - u) * u * u, u ** 3
+                pts.append((a * cur[0] + b * x1 + c * x2 + e * x, a * cur[1] + b * y1 + c * y2 + e * y))
+            cur = (x, y)
+            i += 7
+        else:
+            i += 1
+    return pts
+
+
+def outline_span(outline, x):
+    """(top y, bottom y) of a closed outline at abscissa x (linear interp)."""
+    pts = sample_path(outline, 48)
+    ys = []
+    for (x0, y0), (x1, y1) in zip(pts, pts[1:] + pts[:1]):
+        if (x0 - x) * (x1 - x) <= 0 and x0 != x1:
+            ys.append(y0 + (y1 - y0) * (x - x0) / (x1 - x0))
+    return min(ys), max(ys)
+
+
+def core_piece(outline, a, cy, b, n=3.2, steps=48):
+    """Superellipse of half-width `a` (centre y `cy`, half-height `b`)
+    intersected with `outline`: the middle of a wide volume, rounded at the
+    sides so it still looks good once the side pieces slide away."""
+    top, bot = [], []
+    for i in range(steps + 1):
+        x = -a + 2 * a * i / steps
+        u = min(1.0, abs(x) / a)
+        h = b * (1 - u ** n) ** (1 / n)
+        t, bt = outline_span(outline, max(-a + 0.01, min(a - 0.01, x)))
+        top.append((x, max(cy - h, t)))
+        bot.append((x, min(cy + h, bt)))
+    return smooth(top + bot[::-1][1:-1], closed=True)
+
+
+def side_piece(outline, x_cut, y_min=-1e9):
+    """The part of a symmetric closed outline (built by `sym`, so its first
+    half runs down the LEFT side) left of x = x_cut (< 0), closed along the
+    cut. Used to split a wide volume into a core + side pieces that
+    parallax apart when the character turns."""
+    pts = sample_path(outline)
+    left = [p for p in pts[: len(pts) // 2 + 1] if p[0] <= x_cut and p[1] >= y_min]
+    return poly([(x_cut, left[0][1])] + left + [(x_cut, left[-1][1])])
+
+
 # ================================================================ geometry
 # All authored on the LEFT (screen-left, negative x) side.
 
@@ -214,6 +272,8 @@ BROW = P(
 # ---- eye dome / eye
 DOME_C = (-68, -170)
 DOME_R = (55, 75)
+DOME_PIVOT_Y = -146       # domes and eyes rotate (spring) about their base
+DOME_SPRING = 'data-om-spring="150 10"'
 EYE_C = (-68, -164.5)     # eye-white centre
 WHITE_R = (32, 41.5)
 RING_C = (-68, -165)
@@ -288,10 +348,11 @@ def white(cx, cy, rx=WHITE_R[0], ry=WHITE_R[1]):
 
 
 def pupil_bone(side, px, py, rx, ry, highlights):
-    # Pivot on the eye's vertical centre line (see echo-src.py) so the pupil
-    # never sorts behind the white when the head yaws.
+    # The pivot sits on the eye's own pivot (centre line, dome-pivot height):
+    # an offset from the eye pivot would sink the pupil behind the white
+    # when the head yaws or pitches (see echo-src.py).
     ex = -EYE_C[0] if side == "r" else EYE_C[0]
-    lines = [f'<g data-om-bone="pupil-{side}" data-om-pivot="{f(ex)} {f(py)}" data-om-z="6">',
+    lines = [f'<g data-om-bone="pupil-{side}" data-om-pivot="{f(ex)} {DOME_PIVOT_Y}" data-om-z="6">',
              "  " + path(blob(px, py, rx, ry, 0.6), C["pupil"])]
     for dx, dy, r in highlights:
         lines.append("  " + f'<circle cx="{f(px + dx)}" cy="{f(py + dy)}" r="{f(r)}" fill="{C["white"]}"/>')
@@ -402,10 +463,6 @@ def crease(cx, cy):
     outer = ellipse_pts(cx, cy, rx, ry, -142, -38, 26, grow=lambda u: 1 + 6.5 * math.sin(math.pi * u))
     inner_pts = ellipse_pts(cx, cy, rx - 0.5, ry - 0.5, -38, -142, 26)
     return smooth(outer + inner_pts, closed=True)
-
-
-DOME_PIVOT_Y = -146
-DOME_SPRING = 'data-om-spring="150 10"'
 
 
 def dome(side):
@@ -532,6 +589,23 @@ def hind_leg(side):
     )
 
 
+def cheek(side):
+    """Side of the wide head, set back so the head narrows in profile."""
+    m = (lambda d: d) if side == "l" else mirror
+    s = -1 if side == "l" else 1
+    return wrap(f'<g data-om-bone="cheek-{side}" data-om-pivot="{s * 84} -150" data-om-z="-18">',
+                [path(m(side_piece(HEAD, -74)), C["body"])])
+
+
+def flank(side):
+    """Side of the body, set back so the body narrows in profile. Kept below
+    the head line: it out-sorts the head when the body turns."""
+    m = (lambda d: d) if side == "l" else mirror
+    s = -1 if side == "l" else 1
+    return wrap(f'<g data-om-bone="flank-{side}" data-om-pivot="{s * 66} -60" data-om-z="-10">',
+                [path(m(side_piece(BODY, -54, -100)), C["body"])])
+
+
 def spots(lst, color):
     return [path(blob(x, y, rx, ry), color) for x, y, rx, ry in lst]
 
@@ -544,7 +618,8 @@ def build():
     head = wrap('<g data-om-bone="head" data-om-pivot="0 -92" data-om-z="6">', (
         wrap('<g data-om-bone="head-back" data-om-pivot="0 -175" data-om-z="-40" data-om-surface="back">',
              spots(HEAD_SPOTS, C["spot"]))
-        + [path(HEAD, C["body"]), path(BROW, C["brow"])]
+        + cheek("l") + cheek("r")
+        + [path(core_piece(HEAD, 92, -152, 76), C["body"]), path(BROW, C["brow"])]
         + dome("l") + dome("r") + eye("l") + eye("r")
         + slot("blush", blush, "off", z=40)
         + wrap('<g data-om-bone="nose" data-om-pivot="0 -140" data-om-z="48" data-om-surface="face">',
@@ -565,7 +640,8 @@ def build():
         hind_leg("l") + hind_leg("r")
         + wrap('<g data-om-bone="body-back" data-om-pivot="0 -70" data-om-z="-12" data-om-surface="back">',
                [path(BODY_BACK, C["back"])] + spots(BACK_SPOTS, C["spot"]))
-        + [path(BODY, C["body"])]
+        + flank("l") + flank("r")
+        + [path(core_piece(BODY, 72, -75, 76), C["body"])]
         + head
         + wrap('<g data-om-bone="belly" data-om-pivot="0 -45" data-om-z="20" data-om-surface="face">',
                [path(BELLY, C["belly"])])

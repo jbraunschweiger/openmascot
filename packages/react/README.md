@@ -3,12 +3,18 @@
 React bindings for [OpenMascot](../../README.md).
 
 ```bash
-npm install @openmascot/react @openmascot/characters   # (0.1.0, not yet published)
+npm install @openmascot/react @openmascot/characters
+# or: pnpm add @openmascot/react @openmascot/characters
+# or: yarn add @openmascot/react @openmascot/characters
 ```
+
+`react` (18 or newer) is a peer dependency. The component is marked
+`'use client'` for React Server Components frameworks (Next.js app router) and
+renders an empty host element on the server; the mascot mounts on hydration.
 
 ```tsx
 import { Mascot, useMascotRef } from '@openmascot/react';
-import { echo } from '@openmascot/characters';
+import { echo } from '@openmascot/characters/echo';
 
 export function Buddy() {
   const ref = useMascotRef();

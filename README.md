@@ -23,8 +23,9 @@ no proprietary editor and no video files.
   <img src="docs/images/expressions.png" width="600" alt="Echo's sixteen expressions">
 </p>
 
-> Status: **0.1.0, unreleased.** The web runtime is usable today from this
-> monorepo; npm packages and React Native support are on the roadmap.
+> Status: **0.1.0** — the first npm release (`@openmascot/*`) is being
+> prepared; until it is published, use the packages from this monorepo. React
+> Native support is on the roadmap.
 
 ## Why
 
@@ -71,14 +72,25 @@ takes a different route:
 
 ## Quick start
 
-> Until the packages are on npm, clone the repo and use the workspace
-> packages (`pnpm install`, then `pnpm dev` for the playground).
+### Install
+
+```bash
+npm install @openmascot/react @openmascot/characters    # React
+npm install @openmascot/web @openmascot/characters      # custom element / vanilla DOM
+npm install @openmascot/core @openmascot/characters     # engine only (Node, workers, SSR)
+```
+
+(`pnpm add …` / `yarn add …` work the same.) Every package ships ESM + CommonJS
+builds with TypeScript types and works with any bundler. Import a single
+character from its subpath — `@openmascot/characters/echo` — to keep the other
+characters out of your bundle. The CLI runs without installing:
+`npx @openmascot/cli validate echo`.
 
 ### React
 
 ```tsx
 import { Mascot, useMascotRef } from '@openmascot/react';
-import { echo } from '@openmascot/characters';
+import { echo } from '@openmascot/characters/echo';
 
 export function Buddy() {
   const ref = useMascotRef();
@@ -92,19 +104,51 @@ export function Buddy() {
 }
 ```
 
-### Custom element (no framework)
+### Custom element (no framework, no build step)
 
 ```html
 <open-mascot character="echo" animation="dance-bop" bpm="110" look-at-pointer style="width:240px"></open-mascot>
 
 <script type="module">
   import { defineOpenMascot } from '@openmascot/web';
-  import { echo } from '@openmascot/characters';
+  import { echo } from '@openmascot/characters/echo';
   defineOpenMascot({ characters: { echo } });
 
   const el = document.querySelector('open-mascot');
   el.addEventListener('mascot:end', (e) => console.log('finished', e.detail.clip));
   el.play('wave');
+</script>
+```
+
+Without a bundler, load the modules from a CDN. [esm.sh](https://esm.sh)
+resolves the dependencies for you:
+
+```html
+<open-mascot character="echo" animation="wave" style="width:240px"></open-mascot>
+<script type="module">
+  import { defineOpenMascot } from 'https://esm.sh/@openmascot/web@0.1.0';
+  import { echo } from 'https://esm.sh/@openmascot/characters@0.1.0/echo';
+  defineOpenMascot({ characters: { echo } });
+</script>
+```
+
+With [unpkg](https://unpkg.com) (or jsDelivr), map the bare imports with an
+import map:
+
+```html
+<script type="importmap">
+  {
+    "imports": {
+      "@openmascot/core": "https://unpkg.com/@openmascot/core@0.1.0/dist/index.js",
+      "@openmascot/web": "https://unpkg.com/@openmascot/web@0.1.0/dist/index.js",
+      "@openmascot/characters/echo": "https://unpkg.com/@openmascot/characters@0.1.0/dist/echo/index.js"
+    }
+  }
+</script>
+<script type="module">
+  import { defineOpenMascot } from '@openmascot/web';
+  import { echo } from '@openmascot/characters/echo';
+  defineOpenMascot({ characters: { echo } });
 </script>
 ```
 
@@ -139,14 +183,19 @@ Read [docs/architecture.md](docs/architecture.md) for the full pipeline and
 
 ## Packages
 
-| package | what it is |
-|---|---|
-| [`@openmascot/core`](packages/core) | DOM-free engine: XML parser, rig compiler, 2.5D solver, clips, poses, effects, runtime, string renderer, authoring helpers. Zero dependencies. |
-| [`@openmascot/web`](packages/web) | Browser runtime: `DomRenderer`, `MascotPlayer` (rAF loop, visibility pausing, reduced motion, pointer tracking), `<open-mascot>` element. |
-| [`@openmascot/react`](packages/react) | `<Mascot>` component and `useMascotRef()` imperative handle. |
-| [`@openmascot/characters`](packages/characters) | Echo the bat and the shared clip library (idle, fidgets, emotions, gestures, dances). |
-| [`@openmascot/cli`](packages/cli) | `openmascot validate / list / lint / render / framesheet`. |
-| [`apps/playground`](apps/playground) | Vite + React playground: studio, gallery and an app showcase. |
+| package | what it is | min+gzip |
+|---|---|---:|
+| [`@openmascot/core`](packages/core) | DOM-free engine: XML parser, rig compiler, 2.5D solver, clips, poses, effects, runtime, string renderer, authoring helpers. Zero dependencies. | 20.6 kB |
+| [`@openmascot/web`](packages/web) | Browser runtime: `DomRenderer`, `MascotPlayer` (rAF loop, visibility pausing, reduced motion, pointer tracking), `<open-mascot>` element. | 3.1 kB (+ core) |
+| [`@openmascot/react`](packages/react) | `<Mascot>` component and `useMascotRef()` imperative handle. | 0.9 kB (+ web, core) |
+| [`@openmascot/characters`](packages/characters) | Characters and the shared clip library (idle, fidgets, emotions, gestures, dances). One subpath per character: `/echo`, `/pip`, `/riff`, plus `/library`. | 12.3 kB library + ~8–11 kB art per character |
+| [`@openmascot/cli`](packages/cli) | `openmascot validate / list / lint / render / framesheet` (`npx @openmascot/cli`). | — |
+| [`apps/playground`](apps/playground) | Vite + React playground: studio, gallery and an app showcase (not published). | — |
+
+Sizes are upper bounds for importing everything an entry exports (minified,
+gzip -9; `@openmascot/characters/echo` including the library is 20.8 kB). An
+app with React, Echo and the full engine adds about 45 kB gzipped. Run
+`pnpm build && pnpm size` for current numbers.
 
 ## Scripts
 
@@ -162,7 +211,11 @@ Requires Node 22+ and pnpm 10.
 | `pnpm check` | `embed --check` + `typecheck` + `test` (what CI runs first) |
 | `pnpm openmascot <cmd>` | the CLI (`validate`, `list`, `lint`, `render`, `framesheet`) |
 | `pnpm framesheet echo <clip>` | contact sheet of a clip → `out/sheets/` |
-| `pnpm build` | build packages and the playground |
+| `pnpm build` | build the npm packages (`dist/`, ESM + CJS + types) with tsup |
+| `pnpm build:playground` | build the playground |
+| `pnpm size` | minified + gzipped size of every published entry point |
+| `pnpm smoke:pack` | pack the packages and test the tarballs in a fresh consumer project |
+| `pnpm changeset` | describe a change for the next release (see [CONTRIBUTING.md](CONTRIBUTING.md#publishing)) |
 
 ## Documentation
 

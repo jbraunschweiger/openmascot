@@ -157,13 +157,11 @@ def bone(attrs, children):
 
 
 # ================================================================ geometry
-# Body: one round blob (Pip has no neck). The body owns the full egg
-# silhouette; the head owns a slightly smaller circle inside it, so head
-# offsets (bobs, nods) read as a soft squish instead of a seam.
-BODY_C = (0, -119)
+# Body: one round blob (Pip has no neck); head pivot = centre of the ball.
 BODY = egg(0, -119, 110, 110, 100)
-HEAD_C = (0, -122)               # head pivot = centre of the head sphere
-HEAD = blob(0, -122, 103, 103)
+# The head has no art of its own: Pip is one ball, the body egg is the whole
+# silhouette and the face (eyes, beak, cheeks) and crest roll over it. The
+# crest's base reaches 23 units into the egg so head lifts never detach it.
 
 BELLY = egg(0, -51, 51, 33, 32, 0.6)
 
@@ -442,7 +440,7 @@ def wing(side):
 def eye(side):
     s = -1 if side == "l" else 1
     cx = s * -EYE_C[0]
-    attrs = (f'data-om-bone="eye-{side}" data-om-pivot="{f(cx)} {f(EYE_C[1])}" data-om-z="64" '
+    attrs = (f'data-om-bone="eye-{side}" data-om-pivot="{f(cx)} {f(EYE_C[1])}" data-om-z="33" '
              f'data-om-surface="face" data-om-normal="{s * 30} 0"')
     return bone(attrs, slot(f"eye-{side}", eye_variants(side), "open"))
 
@@ -459,17 +457,17 @@ def build():
         path(blob(-66, -91, 13, 7), C["blush"], ' opacity=".5"'),
         path(blob(66, -91, 13, 7), C["blush"], ' opacity=".5"'),
     ]}
-    head = bone('data-om-bone="head" data-om-pivot="0 -122" data-om-z="0"', (
-        bone('data-om-bone="head-back" data-om-pivot="0 -170" data-om-z="-60" data-om-surface="back"',
-             [path(HEAD_BACK, C["back"])])
-        + bone('data-om-bone="tuft" data-om-pivot="4 -214" data-om-z="-4" '
+    # Depth: the head pivot sits at the centre of the ball but carries z 31 so the
+    # head group sorts just in front of the belly (z 30); its children's z are
+    # relative, so absolute depths are eyes 64, beak 112, crest -4.
+    head = bone('data-om-bone="head" data-om-pivot="0 -122" data-om-z="31"', (
+        bone('data-om-bone="tuft" data-om-pivot="4 -214" data-om-z="-35" '
                'data-om-spring="160 9" data-om-tip="18 -270"',
                [path(CREST, C["body"])])
-        + [path(HEAD, C["body"])]
-        + bone('data-om-bone="cheeks" data-om-pivot="0 -91" data-om-z="66" data-om-surface="face"',
+        + bone('data-om-bone="cheeks" data-om-pivot="0 -91" data-om-z="32" data-om-surface="face"',
                slot("blush", blush, "off"))
         + eye("l") + eye("r")
-        + bone('data-om-bone="nose" data-om-pivot="0 -112" data-om-z="112" data-om-surface="feature"',
+        + bone('data-om-bone="nose" data-om-pivot="0 -112" data-om-z="81" data-om-surface="feature"',
                bone('data-om-bone="mouth" data-om-pivot="0 -104" data-om-z="1"',
                     slot("mouth", mouth_variants(), "default")))
     ))
@@ -477,13 +475,17 @@ def build():
         bone('data-om-bone="tail" data-om-pivot="0 -44" data-om-z="-86" data-om-surface="feature" '
              'data-om-spring="120 8" data-om-tip="0 -24"',
              [path(TAIL[0], C["wing"]), path(TAIL[1], C["wing"]), path(TAIL[2], C["wing_hi"])])
+        # back plumage: a darker cap only seen from behind (lives on the body so
+        # it can sort in front of the egg when Pip turns around)
+        + bone('data-om-bone="body-back" data-om-pivot="0 -170" data-om-z="-60" data-om-surface="back"',
+               [path(HEAD_BACK, C["back"])])
         + wing("l") + wing("r")
         + foot("l") + foot("r")
         + [path(BODY, C["body"])]
-        + head
-        + bone('data-om-bone="belly" data-om-pivot="0 -51" data-om-z="52" '
+        + bone('data-om-bone="belly" data-om-pivot="0 -51" data-om-z="30" '
                'data-om-surface="face" data-om-normal="0 20"',
                [path(BELLY, C["belly"])])
+        + head
     ))
     svg = (
         ['<svg xmlns="http://www.w3.org/2000/svg" viewBox="-150 -284 300 294" data-om-character="pip">',

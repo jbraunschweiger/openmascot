@@ -1,7 +1,7 @@
 /**
  * Compiles an annotated SVG (docs/rig-format.md) into a {@link Rig}.
  */
-import type { ArtNode, BoneNode, LayerNode, Rig, RigNode, SlotNode, Surface } from './types';
+import type { ArtNode, BoneNode, LayerNode, PinDef, Rig, RigNode, SlotNode, Surface } from './types';
 import { parseXml, serializeXml, type XmlElement, type XmlNode } from './xml';
 
 export class RigError extends Error {}
@@ -111,6 +111,11 @@ export function compileRig(svgSource: string, opts: CompileOptions = {}): Rig {
       const normal = (nums(a['data-om-normal'], 2, `normal of "${name}"`) as [number, number]) ?? [0, 0];
       const springNums = nums(a['data-om-spring'], 2, `spring of "${name}"`);
       const tip = (nums(a['data-om-tip'], 2, `tip of "${name}"`) as [number, number]) ?? [pivot[0], pivot[1] - 30];
+      const limit = nums(a['data-om-spring-limit'], 2, `spring limit of "${name}"`) as [number, number] | undefined;
+      if (limit && !(limit[0] <= limit[1])) throw new RigError(`Invalid spring limit of "${name}": min must be <= max`);
+      if (limit && !springNums) warnings.push({ bone: name, message: `Bone "${name}" has data-om-spring-limit but no data-om-spring` });
+      const sortZ = a['data-om-sort-z'] != null ? nums(a['data-om-sort-z'], 1, `sort-z of "${name}"`)![0] : undefined;
+      const pin = parsePins(a['data-om-pin'], name);
       const bone: BoneNode = {
         kind: 'bone',
         index: nodeIndex++,
@@ -120,8 +125,10 @@ export function compileRig(svgSource: string, opts: CompileOptions = {}): Rig {
         z,
         surface,
         normal,
-        spring: springNums ? { stiffness: springNums[0], damping: springNums[1], tip } : undefined,
+        spring: springNums ? { stiffness: springNums[0], damping: springNums[1], tip, ...(limit ? { limit } : {}) } : undefined,
         shadow: 'data-om-shadow' in a || undefined,
+        ...(sortZ !== undefined ? { sortZ } : {}),
+        ...(pin ? { pin } : {}),
         attrs: stripOm(a),
         children: [],
       };
@@ -183,6 +190,19 @@ export function compileRig(svgSource: string, opts: CompileOptions = {}): Rig {
   };
 
   const nodes = compileChildren(svg.children, [0, 0], null);
+
+  // Pinned bones are solved after the rest of the tree (see solve.ts), in
+  // document order, so they may follow any bone except their own subtree or a
+  // pinned bone that comes later.
+  const pinned = bones.filter((b) => b.pin);
+  for (const b of pinned) {
+    for (const p of b.pin!) {
+      const target = bonesByName[p.bone]?.[0];
+      if (!target) warnings.push({ bone: b.name, message: `Bone "${b.name}" is pinned to unknown bone "${p.bone}"` });
+      else if (target === b || isDescendant(target, b)) warnings.push({ bone: b.name, message: `Bone "${b.name}" cannot be pinned to itself or its own descendant "${p.bone}"` });
+      else if (target.pin && pinned.indexOf(target) > pinned.indexOf(b)) warnings.push({ bone: b.name, message: `Bone "${b.name}" is pinned to "${p.bone}", a pinned bone later in the document` });
+    }
+  }
   if (!bonesByName.root) warnings.push({ message: 'No "root" bone; whole-body animations will have no effect' });
 
   // Layer-order consistency check: document order should match z order.
@@ -223,6 +243,27 @@ export function compileRig(svgSource: string, opts: CompileOptions = {}): Rig {
   };
 }
 
+function parsePins(s: string | undefined, name: string): PinDef[] | undefined {
+  if (s == null) return undefined;
+  const t = s.trim().split(/[\s,;]+/).filter(Boolean);
+  if (t.length !== 3 && t.length !== 6) throw new RigError(`Invalid pin of "${name}": "${s}" (expected "bone x y" or "bone x y bone2 x2 y2")`);
+  const out: PinDef[] = [];
+  for (let i = 0; i < t.length; i += 3) {
+    const x = Number(t[i + 1]);
+    const y = Number(t[i + 2]);
+    if (!Number.isFinite(x) || !Number.isFinite(y) || Number.isFinite(Number(t[i]))) throw new RigError(`Invalid pin of "${name}": "${s}" (expected "bone x y" or "bone x y bone2 x2 y2")`);
+    out.push({ bone: t[i], at: [x, y] });
+  }
+  return out;
+}
+
+function isDescendant(node: BoneNode | undefined, of: BoneNode): boolean {
+  if (!node) return false;
+  const walk = (ns: RigNode[]): boolean =>
+    ns.some((n) => n === node || (n.kind === 'bone' || n.kind === 'layer' ? walk(n.children) : n.kind === 'slot' ? n.variants.some((v) => walk(v.children)) : false));
+  return walk(of.children);
+}
+
 function containsAnnotated(el: XmlElement): boolean {
   for (const c of el.children) {
     if (c.type !== 'element') continue;
@@ -246,7 +287,9 @@ export function describeRig(rig: Rig): string {
         const bits = [`pivot ${n.pivot.join(',')}`];
         if (n.z) bits.push(`z ${n.z}`);
         if (n.surface !== 'volume') bits.push(n.surface);
-        if (n.spring) bits.push(`spring ${n.spring.stiffness}/${n.spring.damping}`);
+        if (n.spring) bits.push(`spring ${n.spring.stiffness}/${n.spring.damping}${n.spring.limit ? ` ${n.spring.limit.join('..')}°` : ''}`);
+        if (n.sortZ !== undefined) bits.push(`sort-z ${n.sortZ}`);
+        if (n.pin) bits.push(`pin ${n.pin.map((p) => p.bone).join('+')}`);
         lines.push(`${pad}● ${n.name}  (${bits.join(', ')})`);
         walk(n.children, depth + 1);
       } else if (n.kind === 'slot') {
