@@ -1,0 +1,28 @@
+{
+  "name": "openmascot-monorepo",
+  "private": true,
+  "version": "0.0.0",
+  "description": "OpenMascot — an open-source engine for rigged, animated SVG brand mascots.",
+  "license": "MIT",
+  "type": "module",
+  "packageManager": "pnpm@10.28.0",
+  "scripts": {
+    "dev": "pnpm --filter @openmascot/playground dev",
+    "build": "pnpm -r --filter ./packages/** build && pnpm --filter @openmascot/playground build",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "embed": "node packages/characters/scripts/embed-svg.mjs",
+    "framesheet": "tsx packages/cli/src/bin.ts framesheet",
+    "openmascot": "tsx packages/cli/src/bin.ts",
+    "check": "pnpm embed --check && pnpm typecheck && pnpm test"
+  },
+  "devDependencies": {
+    "@resvg/resvg-js": "^2.6.2",
+    "@types/node": "^26.6.5",
+    "playwright-core": "^1.64.1",
+    "tsx": "^4.23.15",
+    "typescript": "5.9.3",
+    "vitest": "3.2.4"
+  }
+}
