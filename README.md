@@ -6,6 +6,11 @@ Duolingo-style mascot that blinks, breathes, glances around, emotes, dances,
 turns in pseudo-3D and throws hearts and confetti — in a few kilobytes, with
 no proprietary editor and no video files.
 
+**[▶ Live demo](https://jbraunschweiger.github.io/openmascot/)** —
+[Studio](https://jbraunschweiger.github.io/openmascot/#/studio) ·
+[Gallery](https://jbraunschweiger.github.io/openmascot/#/gallery) ·
+[App showcase](https://jbraunschweiger.github.io/openmascot/#/app)
+
 <p align="center">
   <img src="docs/images/hero.png" width="300" alt="Echo the bat waving">
 </p>
