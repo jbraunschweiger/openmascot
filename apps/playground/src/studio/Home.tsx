@@ -8,6 +8,7 @@ import { copyText, DEMO_OPTIONS, isBeats } from './shared';
 import { CAST, clipsOf, getCharacter, hasClip, ownClips, taglineOf, tintOf, useCharacterSelection } from './cast';
 import { CharacterPicker, SafeMascot } from './cast-ui';
 import { Code, useInterval } from './ui';
+import { ConstructionHero } from './ConstructionHero';
 import './studio.css';
 
 const HERO_PAD: [number, number, number, number] = [90, 20, 40, 20];
@@ -520,14 +521,7 @@ export function Home() {
           <div className="hm-kicker">How it works</div>
           <h2 className="hm-h2">From a drawing to a character</h2>
           <p className="hm-sub">No proprietary editor, no runtime bloat. A rig is just an SVG with a few annotations — readable by humans, designers’ tools and AI models alike.</p>
-          <ol className="hm-pipe">
-            {PIPE.map(([t, d]) => (
-              <li key={t}>
-                <b>{t}</b>
-                <span>{d}</span>
-              </li>
-            ))}
-          </ol>
+          <ConstructionHero c={c} steps={PIPE} />
         </div>
       </section>
 
