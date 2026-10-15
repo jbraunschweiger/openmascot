@@ -93,7 +93,7 @@ and the same `MascotHandle`. Pointer tracking becomes optional touch tracking.
 - Stick to basic shapes, paths, solid fills, simple linear/radial gradients.
 - Avoid filters (`feGaussianBlur`, drop shadows), masks, CSS in `<style>`,
   `<text>` with fonts (draw glyphs as paths — the built-in effects already do).
-- Keep node counts modest (Echo: ~60 bone instances, a few hundred shapes).
+- Keep node counts modest (Echo: 30 bone instances and ~110 shapes).
 
 ## Later: native players via export
 
