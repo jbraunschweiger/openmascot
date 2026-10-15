@@ -6,7 +6,7 @@ import { parseXml, serializeXml, type XmlElement, type XmlNode } from './xml';
 
 export class RigError extends Error {}
 
-const SURFACES: Surface[] = ['volume', 'flat', 'face', 'back'];
+const SURFACES: Surface[] = ['volume', 'flat', 'face', 'back', 'feature'];
 
 export interface RigWarning {
   message: string;

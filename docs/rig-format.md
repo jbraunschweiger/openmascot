@@ -45,7 +45,7 @@ transform. Bones nest; a bone's transform applies to everything inside it.
 | `data-om-bone="name"` | Bone name. Animations address bones by name. The same name may appear in several **variants of one slot** (e.g. a `pupil-l` inside each eye variant); all instances receive the same pose. | — |
 | `data-om-pivot="x y"` | Rotation / scale origin (absolute coordinates). | parent pivot |
 | `data-om-z="n"` | Depth of the pivot **relative to the parent pivot**, positive = toward the viewer. Drives pseudo‑3D parallax, sibling layering and perspective. | `0` |
-| `data-om-surface` | How the bone reacts to 3D rotation (see below): `volume`, `flat`, `face`, `back`. | `volume` |
+| `data-om-surface` | How the bone reacts to 3D rotation (see below): `volume`, `flat`, `face`, `back`, `feature`. | `volume` |
 | `data-om-normal="yaw pitch"` | Direction (degrees) the surface faces at rest. An eye on the left of a round head faces slightly left, e.g. `-25 0`. | `0 0` |
 | `data-om-spring="stiffness damping"` | Secondary motion: the bone's rotation lags/overshoots when its parent accelerates (ears, hair tufts, wings, antennae). | none |
 | `data-om-tip="x y"` | Centre of mass used by the spring (usually the far tip of the ear/wing). | pivot + (0, −30) |
@@ -77,6 +77,7 @@ is distorted:
 | `flat` | Scaled by `cos(angle)` on each axis — becomes a sliver edge-on and **mirrors** when seen from behind. | wings, ears, fins, tufts |
 | `face` | Mildly foreshortened, **fades out when facing away** (back-face culling). | eyes, snout, mouth, belly patch, blush |
 | `back` | Like `face`, but only visible from **behind** (normal + 180°). | back markings, wing-joint details |
+| `feature` | Foreshortened like `face` but **never culled**; sorted by depth so the parent's art occludes it once it turns away. Sticks out in profile. | snouts, beaks, noses, horns |
 
 With just these four rules a front-view drawing can spin 360°, look around,
 and nod convincingly — the classic flat-vector "2.5D" trick.

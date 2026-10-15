@@ -5,9 +5,6 @@
   </g>
   <g data-om-bone="root" data-om-pivot="0 0">
     <g data-om-bone="body" data-om-pivot="0 -75">
-      <g data-om-bone="body-back" data-om-pivot="0 -75" data-om-z="-12" data-om-surface="back">
-        <path d="M 0 -122 C -30 -122 -52 -102 -52 -76 C -52 -48 -32 -26 0 -26 C 32 -26 52 -48 52 -76 C 52 -102 30 -122 0 -122 Z " fill="#5a4588"/>
-      </g>
       <g data-om-bone="wing-l" data-om-pivot="-68 -104" data-om-z="-20" data-om-surface="flat" data-om-spring="90 9" data-om-tip="-196 -72">
         <g data-om-slot="wing-l">
           <g data-om-variant="spread">
@@ -41,6 +38,9 @@
     <path d="M 54 -118 C 74 -120 92 -104 99 -78 C 105 -55 106 -28 103 -4 C 102.5 -1 99.5 0 97.5 -2 L 96.5 -4.5 C 96 -30 94 -56 89 -76 C 84 -94 72 -106 56 -108 Z" fill="#6a529c"/>
           </g>
         </g>
+      </g>
+      <g data-om-bone="body-back" data-om-pivot="0 -75" data-om-z="-12" data-om-surface="back">
+        <path d="M 0 -122 C -30 -122 -52 -102 -52 -76 C -52 -48 -32 -26 0 -26 C 32 -26 52 -48 52 -76 C 52 -102 30 -122 0 -122 Z " fill="#5a4588"/>
       </g>
       <g data-om-bone="foot-l" data-om-pivot="-23 -24" data-om-z="-6">
         <path d="M -39 -34 L -39 -15 C -39 -6 -32 0 -23 0 C -14 0 -7 -6 -7 -15 L -7 -34 Z " fill="#513f77"/>
@@ -245,7 +245,7 @@
             </g>
           </g>
         </g>
-        <g data-om-bone="nose" data-om-pivot="0 -110" data-om-z="50" data-om-surface="face">
+        <g data-om-bone="nose" data-om-pivot="0 -110" data-om-z="66" data-om-surface="feature">
           <path d="M 0 -126.5 C 13.63 -126.5 23.5 -119.78 23.5 -110.5 C 23.5 -101.22 13.63 -94.5 0 -94.5 C -13.63 -94.5 -23.5 -101.22 -23.5 -110.5 C -23.5 -119.78 -13.63 -126.5 0 -126.5 Z " fill="#e386ba"/>
           <path d="M -8.5 -115.6 C -6.51 -115.6 -4.9 -113.09 -4.9 -110 C -4.9 -106.91 -6.51 -104.4 -8.5 -104.4 C -10.49 -104.4 -12.1 -106.91 -12.1 -110 C -12.1 -113.09 -10.49 -115.6 -8.5 -115.6 Z " fill="#ae508d"/>
           <path d="M 8.5 -115.6 C 6.51 -115.6 4.9 -113.09 4.9 -110 C 4.9 -106.91 6.51 -104.4 8.5 -104.4 C 10.49 -104.4 12.1 -106.91 12.1 -110 C 12.1 -113.09 10.49 -115.6 8.5 -115.6 Z" fill="#ae508d"/>

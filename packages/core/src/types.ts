@@ -73,7 +73,7 @@ export interface Pose {
 /* Rig (compiled character)                                            */
 /* ------------------------------------------------------------------ */
 
-export type Surface = 'volume' | 'flat' | 'face' | 'back';
+export type Surface = 'volume' | 'flat' | 'face' | 'back' | 'feature';
 
 export interface SpringDef {
   stiffness: number;

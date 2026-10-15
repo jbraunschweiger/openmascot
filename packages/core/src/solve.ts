@@ -128,6 +128,15 @@ export function solve(rig: Rig, input: SolveInput, opts: SolveOptions = {}, prev
       if (b.surface === 'flat') {
         fx = Math.abs(cx0) > 1e-3 ? cxa / Math.abs(cx0) : cxa;
         fy = Math.abs(cy0) > 1e-3 ? cya / Math.abs(cy0) : cya;
+        // Edge-on flat art degenerates into a distracting sliver: fade it out.
+        vis = smoothstep(0.03, 0.2, Math.abs(cxa * cya));
+      } else if (b.surface === 'feature') {
+        // Protruding feature (snout, beak): foreshortens but never culls; the
+        // parent's art occludes it naturally once it rotates behind.
+        const rxr = Math.abs(cx0) > 1e-3 ? Math.abs(cxa) / Math.abs(cx0) : Math.abs(cxa);
+        const ryr = Math.abs(cy0) > 1e-3 ? Math.abs(cya) / Math.abs(cy0) : Math.abs(cya);
+        fx = lerp(1, clamp(Math.max(rxr, 0.4), 0, 1.1), faceK);
+        fy = lerp(1, clamp(Math.max(ryr, 0.4), 0, 1.1), faceK);
       } else {
         const facing = cxa * cya;
         vis = smoothstep(0.02, 0.32, facing);
@@ -169,6 +178,9 @@ export function solve(rig: Rig, input: SolveInput, opts: SolveOptions = {}, prev
       fy: b.surface === 'volume' ? ctx.fy : ctx.fy * fy,
       opacity: ctx.opacity * opacity,
     });
+    // Face features sit *on* their parent's surface: keep them in front of the
+    // parent's own art (culling, not sorting, hides them when turned away).
+    if (b.surface === 'face' && b.z > 0) return Math.max(rz + ch.dz, 1e-3);
     return rz + ch.dz;
   };
 

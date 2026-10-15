@@ -609,7 +609,7 @@ def build():
            + ["  " + x for x in slot("mouth", mouth_variants(), "default")]
            + ["</g>"]]
         + ["  " + l for l in [
-            '<g data-om-bone="nose" data-om-pivot="0 -110" data-om-z="50" data-om-surface="face">',
+            '<g data-om-bone="nose" data-om-pivot="0 -110" data-om-z="66" data-om-surface="feature">',
             "  " + path(SNOUT, C["snout"]),
             "  " + path(NOSTRIL_L, C["nostril"]),
             "  " + path(mirror(NOSTRIL_L), C["nostril"]),
@@ -618,11 +618,11 @@ def build():
     )
     body = (
         ['<g data-om-bone="body" data-om-pivot="0 -75">']
+        + ["  " + l for l in wing("l") + wing("r")]
         + ["  " + l for l in [
             '<g data-om-bone="body-back" data-om-pivot="0 -75" data-om-z="-12" data-om-surface="back">',
             "  " + path(BODY_BACK, C["back_dark"]),
             "</g>"]]
-        + ["  " + l for l in wing("l") + wing("r")]
         + ["  " + l for l in foot("l") + foot("r")]
         + ["  " + path(BODY, C["body"])]
         + ["  " + l for l in head]
