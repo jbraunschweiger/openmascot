@@ -122,8 +122,8 @@ export const echoClips: Record<string, Clip> = defineClips({
       root: { y: keys('sineInOut', [0, 94], [3.1, 94], [3.35, 86], [3.6, 94], [4, 94]) },
       head: { rot: keys('sineInOut', [0, 0], [0.9, -4], [1.6, -4], [2.0, 4], [2.8, 4], [3.2, 0], [4, 0]) },
       // feet become little paws gripping the ledge; wings tucked out of sight below it
-      'foot-l': { x: [[0, -46]], y: keys('sineInOut', [0, -71], [3.1, -71], [3.35, -65], [3.6, -71], [4, -71]), dz: [[0, 90]], sy: [[0, -0.85]], sx: [[0, 1.1]] },
-      'foot-r': { x: [[0, 46]], y: keys('sineInOut', [0, -71], [3.1, -71], [3.35, -65], [3.6, -71], [4, -71]), dz: [[0, 90]], sy: [[0, -0.85]], sx: [[0, 1.1]] },
+      'foot-l': { x: [[0, -54]], y: keys('sineInOut', [0, -71], [3.1, -71], [3.35, -65], [3.6, -71], [4, -71]), dz: [[0, 90]], sy: [[0, -0.85]], sx: [[0, 1.1]] },
+      'foot-r': { x: [[0, 54]], y: keys('sineInOut', [0, -71], [3.1, -71], [3.35, -65], [3.6, -71], [4, -71]), dz: [[0, 90]], sy: [[0, -0.85]], sx: [[0, 1.1]] },
       'wing-l': { y: [[0, 40]], x: [[0, 20]] },
       'wing-r': { y: [[0, 40]], x: [[0, -20]] },
     },
