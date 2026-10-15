@@ -1,0 +1,10 @@
+{
+  // Used by tsup when emitting .d.ts for the published packages. Unlike
+  // tsconfig.json it has no `paths`, so workspace imports (`@openmascot/core`)
+  // stay external imports in the emitted declarations, and no ambient `types`,
+  // so a library can't accidentally depend on @types/node.
+  "extends": "./tsconfig.base.json",
+  "compilerOptions": {
+    "types": []
+  }
+}

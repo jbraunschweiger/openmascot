@@ -64,3 +64,40 @@ jobs:
           path: out/sheets/*.png
           if-no-files-found: error
           retention-days: 14
+
+  package:
+    name: Build, pack and smoke-test npm packages
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Install
+        run: pnpm install --frozen-lockfile
+
+      - name: Build packages
+        run: pnpm build
+
+      - name: Bundle sizes
+        run: pnpm -s size --markdown | tee -a "$GITHUB_STEP_SUMMARY"
+
+      # Packs every package into out/pack, checks manifests, publint and
+      # are-the-types-wrong, then installs the tarballs into a project outside
+      # the workspace and runs Node ESM/CJS, SSR, Vite+React, tsc and CLI checks.
+      - name: Pack and smoke-test tarballs
+        run: pnpm smoke:pack
+
+      - name: Upload tarballs
+        uses: actions/upload-artifact@v4
+        with:
+          name: npm-tarballs
+          path: out/pack/*.tgz
+          if-no-files-found: error
+          retention-days: 14
