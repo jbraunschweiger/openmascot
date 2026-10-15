@@ -23,6 +23,11 @@ no proprietary editor and no video files.
   <img src="docs/images/expressions.png" width="600" alt="Echo's sixteen expressions">
 </p>
 
+<p align="center">
+  <img src="docs/images/pip-sweep-root-yaw.png" width="49%" alt="Pip the bird turning in pseudo-3D">
+  <img src="docs/images/riff-sweep-root-yaw.png" width="49%" alt="Riff the frog turning in pseudo-3D">
+</p>
+
 > Status: **0.1.0** — the first npm release (`@openmascot/*`) is being
 > prepared; until it is published, use the packages from this monorepo. React
 > Native support is on the roadmap.
@@ -68,7 +73,8 @@ takes a different route:
   custom element, React `<Mascot>` component, and a string renderer for SSR,
   snapshots and frame sheets.
 - A CLI to validate rigs, lint clips, render frames and build frame sheets.
-- Echo the bat, a complete reference character with 60+ clips.
+- Three ready-made characters — Echo the bat, Pip the bird and Riff the frog —
+  sharing one portable library of 60+ clips (emotes, gestures, 19 dances).
 
 ## Quick start
 
@@ -236,10 +242,11 @@ Start at [docs/README.md](docs/README.md). Highlights:
 - [x] 2.5D solver (parallax, foreshortening, culling, depth sort, perspective)
 - [x] Runtime: crossfades, alive layers, expressions, springs, effects
 - [x] Web: DOM renderer, custom element, React component
-- [x] CLI frame sheets for visual review; Echo the bat
+- [x] CLI frame sheets for visual review; Echo, Pip and Riff
+- [x] Release tooling: tsup builds, per-character subpath exports, changesets
 - [ ] Publish packages to npm (0.1.0)
 - [ ] React Native renderer over `react-native-svg` ([plan](docs/mobile.md))
-- [ ] More characters, and a character template
+- [ ] More characters (Tootie, Ziggy, Forte), and a character template
 - [ ] Lip-sync / talking mouth driven by audio amplitude or visemes
 - [ ] Video / GIF / sprite-sheet export; Lottie export for native players
 - [ ] Visual rig editor in the playground (pivot picking, live z-ordering)

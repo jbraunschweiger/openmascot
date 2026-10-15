@@ -11,6 +11,11 @@ First public version.
 
 ### Added
 
+- **Characters**: Pip the bird and Riff the frog join Echo the bat. All three
+  share expression names and the standard params, so the shared library
+  plays on each; character-specific clips (Pip: hop, peck, chirp, fly, fluff,
+  nap; Riff: croak, ribbit, leap, tongue-catch, lily-sit). The playground
+  Studio and Gallery switch characters and compare a clip across the cast.
 - **Rig format**: annotated SVG (`data-om-bone`, `-pivot`, `-z`, `-surface`,
   `-normal`, `-spring`, `-tip`, `-shadow`, `-slot`, `-variant`, `-default`,
   `-layer`, `-character`) with a compiler, validator warnings and
