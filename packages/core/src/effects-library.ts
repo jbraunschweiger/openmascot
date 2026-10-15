@@ -105,7 +105,7 @@ export const SHAPES = {
   },
   /** Wind swoosh with a curl at the end, ~64 wide. */
   wind: (c: string) =>
-    `<path d="M-34 6C-16 8 4 4 18-4 27-9 31-17 24-21 18-24.5 12-19 15.5-14" fill="none" stroke="${c}" stroke-width="5.5" stroke-linecap="round" stroke-linejoin="round"/>`,
+    `<path d="M-34 6C-16 8 4 4 18-4 27-9 31-17 24-21 18-24.5 12-19 15.5-14" fill="none" stroke="${c}" stroke-width="6.5" stroke-linecap="round" stroke-linejoin="round"/>`,
   /** Speed streak, horizontal, centred. */
   streak: (c: string, len = 60, w = 6) => `<rect x="${-len / 2}" y="${-w / 2}" width="${len}" height="${w}" rx="${w / 2}" fill="${c}"/>`,
 };
@@ -158,7 +158,7 @@ const hearts: EffectDef = {
     const spread = num(params.spread, 100) * scale;
     const size = num(params.size, 1) * scale;
     // size tiers like the reference: one big, one medium, one small, repeat
-    const tiers = [1.15, 0.8, 0.55];
+    const tiers = [1.3, 1.0, 0.68];
     const out: ParticleSpec[] = [];
     for (let i = 0; i < count; i++) {
       const t = count === 1 ? 0.5 : i / (count - 1);
@@ -206,7 +206,7 @@ const heartBurst: EffectDef = {
     for (let i = 0; i < count; i++) {
       const a = phase + (i / count) * Math.PI * 2 + (random() - 0.5) * 0.2;
       const r = radius * (0.85 + random() * 0.25);
-      const s = size * (0.42 + random() * 0.2);
+      const s = size * (0.55 + random() * 0.2);
       const life = 0.85 + random() * 0.2;
       const spin = (random() - 0.5) * 50;
       out.push({
@@ -250,8 +250,8 @@ const sparkles: EffectDef = {
     const layout: [number, number, number][] = [
       [0.12, -1.0, 1.05],
       [-0.92, -0.5, 0.8],
-      [0.94, -0.42, 0.9],
-      [1.14, -0.18, 0.52],
+      [0.94, -0.42, 1.0],
+      [1.16, -0.16, 0.6],
       [-0.6, -0.95, 0.55],
       [-1.12, -0.12, 0.5],
       [0.55, -1.02, 0.6],
@@ -270,7 +270,7 @@ const sparkles: EffectDef = {
       }
       const x = px * radius + (random() - 0.5) * 12 * scale;
       const y = py * radius + (random() - 0.5) * 12 * scale;
-      const s = size * ps * (0.9 + random() * 0.2);
+      const s = size * ps * 1.12 * (0.9 + random() * 0.2);
       const tw = 5 + random() * 4;
       const life = 1.1 + random() * 0.45;
       const ph = random() * 6;
@@ -418,7 +418,7 @@ const sweat: EffectDef = {
       const y0 = (-46 + i * 30) * scale;
       const vx = side * (34 + random() * 14) * scale;
       const life = 0.9 + random() * 0.15;
-      const s = size * (i === 0 ? 0.95 : 0.7) * (0.92 + random() * 0.16);
+      const s = size * (i === 0 ? 1.2 : 0.9) * (0.92 + random() * 0.16);
       out.push({
         markup: SHAPES.drop(color),
         delay: i * 0.1,
@@ -482,8 +482,8 @@ const tears: EffectDef = {
             return {
               x: xs + side * t * 10 * scale + wobble * t,
               y: eyeY + 20 * scale + 34 * scale * t + 120 * scale * t * t,
-              sx: size * 0.62 * easeOut(well),
-              sy: size * 0.62 * (0.4 + 0.6 * easeOut(well)) * (1 + clamp01(t * 3) * 0.12),
+              sx: size * 0.82 * easeOut(well),
+              sy: size * 0.82 * (0.4 + 0.6 * easeOut(well)) * (1 + clamp01(t * 3) * 0.12),
               opacity: fadeOut(age, life, 0.3),
             };
           },
@@ -560,10 +560,10 @@ const anger: EffectDef = {
         at: (u, age) => {
           const throb = 1 + 0.16 * Math.max(0, Math.sin(age * 15)) * clamp01(age / 0.2);
           return {
-            x: side * 82 * scale,
-            y: -66 * scale,
+            x: side * 76 * scale,
+            y: -56 * scale,
             rot: side * 12,
-            scale: size * 1.05 * popIn(age, life, 0.16, 0.2) * throb,
+            scale: size * 1.45 * popIn(age, life, 0.16, 0.2) * throb,
           };
         },
       },
@@ -586,10 +586,10 @@ const zzz: EffectDef = {
       delay: i * 0.6,
       life: 2.1,
       at: (u: number, age: number) => ({
-        x: side * (78 + u * 60) * scale + Math.sin(age * 3) * 8 * scale,
-        y: (-70 - u * 95) * scale,
+        x: side * (100 + u * 60) * scale + Math.sin(age * 3) * 8 * scale,
+        y: (-62 - u * 100) * scale,
         rot: side * (-12 + Math.sin(age * 2.5) * 12),
-        scale: size * (0.75 + u * 0.75) * popIn(age, 2.1, 0.2, 0.4),
+        scale: size * (1.1 + u * 0.9) * popIn(age, 2.1, 0.2, 0.4),
         opacity: fadeOut(age, 2.1, 0.6),
       }),
     }));
@@ -617,7 +617,7 @@ const dizzy: EffectDef = {
         return {
           x: Math.cos(a) * radius,
           y: (-88 + depth * 16) * scale + Math.cos(a) * 8 * scale,
-          scale: size * (0.55 + depth * 0.14) * popIn(age, dur, 0.18, 0.2),
+          scale: size * (0.72 + depth * 0.16) * popIn(age, dur, 0.18, 0.2),
           rot: age * 160,
           opacity: 0.8 + depth * 0.2,
         };
@@ -688,10 +688,10 @@ const bubble: EffectDef = {
   defaultAnchor: 'head',
   follow: true,
   spawn: ({ params, scale }) => {
-    const color = str(params.color, '#efeaf8');
+    const color = str(params.color, '#e9e2f7');
     const dot = str(params.dotColor, '#8f7cc4');
     const side = sideOf(params.side, 1) || 1;
-    const size = num(params.size, 1) * scale;
+    const size = num(params.size, 1.1) * scale;
     const life = num(params.duration, 2.4);
     const bx = side * 128 * scale;
     const by = -102 * scale;
@@ -703,7 +703,7 @@ const bubble: EffectDef = {
         at: (u, age) => ({
           x: bx,
           y: by + bob(age),
-          sx: -side * size * popIn(age, life, 0.2, 0.22),
+          sx: side * size * popIn(age, life, 0.2, 0.22),
           sy: size * popIn(age, life, 0.2, 0.22),
         }),
       },
@@ -801,7 +801,7 @@ const xp: EffectDef = {
           x: cx,
           y: cy - easeOut(age / 0.3) * 16 * scale - u * 36 * scale,
           rot: Math.sin(age * 6) * 3,
-          scale: size * 1.05 * popIn(age, life, 0.2, 0.25),
+          scale: size * 1.25 * popIn(age, life, 0.2, 0.25),
           opacity: fadeOut(age, life, 0.3),
         }),
       },
@@ -837,7 +837,7 @@ const confetti: EffectDef = {
   description: 'Colourful confetti (strips, dots, triangles, squiggles) bursts up from around the character, then flutters and tumbles down (celebration). Params: count, color, spread, size.',
   defaultAnchor: [0, -110],
   spawn: ({ random, params, scale }) => {
-    const count = Math.max(1, Math.round(num(params.count, 34)));
+    const count = Math.max(1, Math.round(num(params.count, 40)));
     const width = num(params.spread, 1) * scale;
     const size = num(params.size, 1) * scale;
     const fixed = colorParam(params.color);
@@ -845,16 +845,17 @@ const confetti: EffectDef = {
     const k = 3; // drag
     const vt = 170 * scale; // terminal fall speed
     for (let i = 0; i < count; i++) {
-      const side = i % 2 === 0 ? -1 : 1;
-      const x0 = side * (20 + random() * 70) * scale;
+      // fan of launch directions from straight up to ~65° either side
+      const fan = (i / Math.max(1, count - 1)) * 2 - 1 + (random() - 0.5) * 0.15;
+      const x0 = fan * 70 * scale;
       const y0 = (-random() * 40) * scale;
-      const vx = side * (120 + random() * 700) * scale * width;
-      const vy = -(650 + random() * 520) * scale;
+      const vx = (fan * 820 + (random() - 0.5) * 160) * scale * width;
+      const vy = -(420 + random() * 420) * scale;
       const spin = (random() - 0.5) * 900;
       const flip = 7 + random() * 8;
       const color = fixed ?? CONFETTI[i % CONFETTI.length];
       const kind = random() < 0.55 ? 0 : Math.floor(random() * 3) + 1;
-      const s = size * (0.85 + random() * 0.35);
+      const s = size * (1.1 + random() * 0.4);
       const flutter = (8 + random() * 10) * scale;
       const ph = random() * 6;
       const life = 2.1 + random() * 0.8;
@@ -910,36 +911,41 @@ const shine: EffectDef = {
 /** Motion streaks for fast moves / spins. */
 const speedLines: EffectDef = {
   name: 'speed-lines',
-  description: 'Horizontal motion streaks zip out from the trailing side of the character (dashes, fast moves, spins). Params: side (which side the streaks trail on: -1 left, 1 right, 0 both), count, color, size, spread.',
+  description: 'Horizontal motion streaks zip out from the trailing side of the character in quick waves (dashes, fast moves, spins). Params: side (side the streaks trail on: -1 left, 1 right, 0 both), count (per wave), color, size, spread, duration.',
   defaultAnchor: 'body',
   follow: true,
   spawn: ({ random, params, scale }) => {
     const side = sideOf(params.side, -1);
-    const count = Math.max(1, Math.round(num(params.count, 5)));
-    const color = str(params.color, '#c9bfe0');
+    const count = Math.max(1, Math.round(num(params.count, 4)));
+    const color = str(params.color, '#b9add6');
     const size = num(params.size, 1) * scale;
     const spread = num(params.spread, 150) * scale;
+    const duration = num(params.duration, 0.6);
+    const waves = Math.max(1, Math.round(duration / 0.2));
     const out: ParticleSpec[] = [];
     const sides = side === 0 ? [-1, 1] : [side];
     for (const sd of sides) {
-      for (let i = 0; i < count; i++) {
-        const t = count === 1 ? 0.5 : i / (count - 1);
-        const y = lerp(-spread * 0.55, spread * 0.45, t) + (random() - 0.5) * 12 * scale;
-        const len = (46 + random() * 50) * size * (1 - Math.abs(t - 0.45) * 0.6);
-        const x0 = sd * (125 + random() * 40) * scale;
-        const life = 0.42 + random() * 0.15;
-        out.push({
-          markup: SHAPES.streak(color, 60, 6),
-          delay: random() * 0.18,
-          life,
-          at: (u) => ({
-            x: x0 + sd * (easeOut(u) * 70 * scale + (len / 2) * u),
-            y,
-            sx: (len / 60) * Math.sin(Math.PI * Math.min(1, u * 1.1)) + 0.05,
-            sy: size * (1 - u * 0.4),
-            opacity: 1 - u * u,
-          }),
-        });
+      for (let w = 0; w < waves; w++) {
+        for (let i = 0; i < count; i++) {
+          const t = count === 1 ? 0.5 : (i + (w % 2) * 0.5) / count;
+          const y = lerp(-spread * 0.55, spread * 0.45, t) + (random() - 0.5) * 14 * scale;
+          const len = (55 + random() * 55) * size * (1 - Math.abs(t - 0.45) * 0.7);
+          const x0 = sd * (120 + random() * 40) * scale;
+          const life = 0.36 + random() * 0.12;
+          const thick = 0.8 + random() * 0.45;
+          out.push({
+            markup: SHAPES.streak(color, 60, 7),
+            delay: w * 0.2 + random() * 0.1,
+            life,
+            at: (u) => ({
+              x: x0 + sd * (easeOut(u) * 80 * scale + (len / 2) * u),
+              y,
+              sx: (len / 60) * Math.sin(Math.PI * Math.min(1, u * 1.1)) + 0.05,
+              sy: size * thick * (1 - u * 0.4),
+              opacity: 1 - u * u,
+            }),
+          });
+        }
       }
     }
     return out;
@@ -954,14 +960,14 @@ const wind: EffectDef = {
   spawn: ({ random, params, scale }) => {
     const side = sideOf(params.side, 0);
     const count = Math.max(1, Math.round(num(params.count, 2)));
-    const color = str(params.color, '#b6d8f5');
+    const color = str(params.color, '#9fcdf2');
     const size = num(params.size, 1) * scale;
     const out: ParticleSpec[] = [];
     const sides = side === 0 ? [-1, 1] : [side];
     for (const sd of sides) {
       for (let i = 0; i < count; i++) {
-        const x0 = sd * (150 + i * 22 + random() * 10) * scale;
-        const y0 = (10 + i * 42 + random() * 8) * scale;
+        const x0 = sd * (172 + i * 16 + random() * 10) * scale;
+        const y0 = (-2 + i * 40 + random() * 8) * scale;
         const life = 0.65 + random() * 0.15;
         const s = size * (1 - i * 0.18);
         out.push({
@@ -993,7 +999,7 @@ const puff: EffectDef = {
   description: 'Chunky dust clouds billow out sideways from the feet and dissolve (landing, stomping, dashing off). Params: count, color, spread, size, side (0 both).',
   defaultAnchor: [0, 0],
   spawn: ({ random, params, scale }) => {
-    const color = str(params.color, '#d5cde3');
+    const color = str(params.color, '#cfc6df');
     const hi = str(params.highlight, '#f1edf7');
     const count = Math.max(1, Math.round(num(params.count, 8)));
     const spread = num(params.spread, 100) * scale;
@@ -1004,8 +1010,8 @@ const puff: EffectDef = {
       const k = only ? i : Math.floor(i / 2);
       const n = only ? count : Math.ceil(count / 2);
       const t = n <= 1 ? 0 : k / (n - 1);
-      const dist = spread * (0.35 + t * 0.85 + random() * 0.1);
-      const s = size * (1.15 - t * 0.5 + random() * 0.15);
+      const dist = spread * (0.3 + t * 0.7 + random() * 0.1);
+      const s = size * (1.6 - t * 0.6 + random() * 0.2);
       const lift = (8 + t * 22 + random() * 6) * scale;
       const life = 0.6 + random() * 0.2 + t * 0.1;
       return {
@@ -1018,8 +1024,8 @@ const puff: EffectDef = {
           return {
             x: side * (30 * scale + e * dist),
             y: -10 * scale - e * lift,
-            scale: s * (0.5 + e * 0.6) * (1 - Math.pow(u, 3)) * popIn(age, life, 0.08, 0.05),
-            opacity: u < 0.5 ? 1 : 1 - ((u - 0.5) / 0.5) ** 2,
+            scale: s * (0.55 + e * 0.55) * (1 - Math.pow(u, 4) * 0.45) * popIn(age, life, 0.08, 0.05),
+            opacity: u < 0.4 ? 1 : 1 - ((u - 0.4) / 0.6) ** 1.5,
           };
         },
       };

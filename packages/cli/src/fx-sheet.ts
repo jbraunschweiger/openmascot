@@ -21,7 +21,7 @@ for (let i = 0; i < argv.length; i++) {
 }
 const ages = (flags.ages ?? '0.1,0.3,0.6,1.0,1.5').split(',').map(Number);
 const out = flags.out ?? 'out/sheets/effects.png';
-const tileW = Number(flags.tile ?? 240);
+const tileW = Number(flags.tile ?? 260);
 
 /** Per-effect emit options for the sheet (anchors / params that show the effect off). */
 const demo: Record<string, { at?: string | [number, number]; params?: Record<string, unknown>; clip?: string }> = {

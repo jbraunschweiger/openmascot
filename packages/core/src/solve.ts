@@ -8,7 +8,8 @@
  *    we keep the projected 2D offset (parallax) and the new depth (sorting).
  *  - Flat art is foreshortened by the cosine of its facing angle (and mirrors
  *    when seen from behind); `face` art fades out when facing away.
- *  - A weak perspective term scales parts by their depth.
+ *  - A weak perspective term scales parts by how far their depth has moved
+ *    from the rest pose (so the rest pose is exactly the source drawing).
  */
 import { boneMatrix, IDENTITY, mul } from './mat';
 import { clamp, lerp, smoothstep } from './ease';
@@ -37,6 +38,8 @@ interface Ctx {
   yaw: number;
   pitch: number;
   depth: number;
+  /** Depth of the pivot in the rest pose (accumulated `data-om-z`). */
+  restDepth: number;
   /** Product of foreshortening already applied by ancestors (x, y). */
   fx: number;
   fy: number;
@@ -151,11 +154,17 @@ export function solve(rig: Rig, input: SolveInput, opts: SolveOptions = {}, prev
     }
 
     const depth = ctx.depth + rz + ch.dz;
+    const restDepth = ctx.restDepth + b.z;
     let k = 1;
     if (focal > 0) {
-      const d0 = Math.min(ctx.depth, focal * 0.8);
-      const d1 = Math.min(depth, focal * 0.8);
-      k = (focal - d0) / (focal - d1);
+      // Perspective relative to the rest pose, so the rest pose renders exactly
+      // like the source drawing (the artist already drew near parts near-sized).
+      const lim = focal * 0.8;
+      const d0 = Math.min(ctx.depth, lim);
+      const d1 = Math.min(depth, lim);
+      const r0 = Math.min(ctx.restDepth, lim);
+      const r1 = Math.min(restDepth, lim);
+      k = ((focal - d0) / (focal - d1)) * ((focal - r1) / (focal - r0));
     }
 
     const rot = ch.rot + (extra[b.name] ?? 0);
@@ -174,6 +183,7 @@ export function solve(rig: Rig, input: SolveInput, opts: SolveOptions = {}, prev
       yaw,
       pitch,
       depth,
+      restDepth,
       fx: b.surface === 'volume' ? ctx.fx : ctx.fx * fx,
       fy: b.surface === 'volume' ? ctx.fy : ctx.fy * fy,
       opacity: ctx.opacity * opacity,
@@ -190,6 +200,7 @@ export function solve(rig: Rig, input: SolveInput, opts: SolveOptions = {}, prev
     yaw: 0,
     pitch: 0,
     depth: 0,
+    restDepth: 0,
     fx: 1,
     fy: 1,
     opacity: 1,
