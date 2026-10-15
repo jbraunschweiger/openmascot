@@ -73,13 +73,15 @@ faces slightly left, e.g. `-25 0`).
 | surface | foreshortening | visibility | use for |
 |---|---|---|---|
 | `volume` (default) | none | always | round heads, bodies, feet — anything that looks the same from all sides |
-| `flat` | `x` scaled by `cos(facing yaw) / cos(normal yaw)` (same for pitch on `y`) — **negative from behind, i.e. mirrored** | fades out only when edge-on (|cos| < ~0.2) to avoid slivers | wings, ears, fins, tufts, flags |
+| `flat` | `x` scaled by `cos(facing yaw) / cos(normal yaw)` (same for pitch on `y`) — **negative from behind, i.e. mirrored** | fades out only when edge-on (|cos| < ~0.2) to avoid slivers — or, with `data-om-flat-min`, keeps that minimum width and stays opaque (Echo's wings and ears) | wings, ears, fins, tufts, flags |
 | `face` | mild: `lerp(1, cos-ratio, faceForeshorten)` (default 0.85), clamped at 0 | **fades out as it turns away** (smoothstep on `cos(yaw)·cos(pitch)` from 0.32 down to 0.02) | eyes, mouth, blush, belly patch, inner ears |
 | `back` | like `face` | like `face`, but faces **backwards** (normal + 180°): visible only from behind | back markings, the back of the head |
 | `feature` | like `face` but never below 40 % | **never culled**; relies on depth sorting so the parent's art hides it | snouts, beaks, noses, horns — things that stick out in profile |
 
 Foreshortening is **not compounded**: a `face` bone inside a `flat` bone has
-its parent's factor divided back out.
+its parent's factor divided back out, and a child's parallax offset is
+projected once — a wrist pivot inside a yawed `flat` arm moves by `cos(yaw)`,
+not `cos²(yaw)`.
 
 ## Depth sorting
 
@@ -91,7 +93,16 @@ drawn in order of projected depth:
 - layers and slots use their rotated `data-om-z`;
 - ties keep document order (stable sort);
 - `face` bones with `z > 0` never sort behind their parent's own art
-  (culling, not sorting, hides them when the head turns away).
+  (culling, not sorting, hides them when the head turns away);
+- `data-om-sort-z` replaces `z` for sorting only (parallax keeps `z`): a big
+  volume sorts by the surface that actually overlaps its neighbours. Echo's
+  head has `z 4` but `sort-z 60` (the chin overhangs the chest) and the belly
+  `z 40` / `sort-z 10`, so pitching or twisting the body can never pull the
+  chest over the chin — while from behind the head still goes behind the
+  body;
+- inside a surface with a `data-om-normal` (an eye facing sideways), children
+  sort along that normal, i.e. by the surface's facing — a pupil stays on its
+  eye as long as the eye is visible.
 
 At rest everything is in document order (the rig validator warns if your
 document order disagrees with `z`). When Echo turns around, `wing-l` at
@@ -100,17 +111,38 @@ document order disagrees with `z`). When Echo turns around, `wing-l` at
 ```
  Echo's body, rest (yaw 0)          from behind (root.yaw 180)
   back ─▶ front                      back ─▶ front
-   wing-l     z −20                   head       (now −4)
+   wing-l     z −20                   head       (sort-z 60 → −60)
    wing-r     z −20                   body art   (0)
    body-back  z −12                   belly      (face: culled, kept in front of the art)
    foot-l/r   z −6       ──▶          foot-l/r   (now +6)
    body art   0                       body-back  (now +12, visible)
-   head       z +4                    wing-l/r   (now +20, mirrored)
-   belly      z +40
+   belly      sort-z 10               wing-l/r   (now +20, mirrored)
+   head       sort-z 60
 ```
 
 When a container's order differs from document order, the solver writes the
 permutation to `Frame.order` and renderers re-order the DOM (or the string).
+
+### Wings in a turn
+
+Wings are the hardest part of a turnaround: a spread wing pointing at the
+camera is a flat card across the body. What Echo does:
+
+- the wing chain sorts by its shoulder pivot, so the near wing comes in front
+  exactly when its root crosses the body's silhouette (~18°), and the far wing
+  stays behind until ~160°;
+- `data-om-flat-min="0.1"` on the wing bones: edge-on (≈90°) the wing is a
+  thin opaque sliver — a wing seen side-on — instead of a ghostly fade;
+- folding adds a little `yaw` to the arm, so a relaxed/folded wing faces
+  sideways and reads as a wing against the flank in profile;
+- the flank skin is pinned to `wing-root-l`, a body anchor **at the wing's
+  depth**, so from behind the membrane turns with the wing instead of
+  stretching across the body;
+- dances tuck the wings (`wingFold` ≈ 0.8) through spins and fling them open
+  on the landing.
+
+Review with `--sweep root.yaw --range 0,345 --frames 24 --cols 8` and dense
+sheets of `dance-spin` / `dance-jump-spin`.
 
 ## Perspective
 

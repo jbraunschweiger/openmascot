@@ -162,12 +162,26 @@ describe('Riff: clips', () => {
     for (const c of ['croak', 'leap', 'tongue-catch', 'lily-sit', 'ribbit', 'fidget-eye-bob', 'fidget-gulp']) expect(riffClips[c], c).toBeDefined();
   });
 
-  it('re-targets every library clip that moves wings onto the arms', () => {
+  it('no clip available to Riff addresses wings (param-driven or re-targeted onto the arms)', () => {
     for (const [name, c] of Object.entries(all)) {
       expect(Object.keys(c.bones ?? {}).filter((b) => b.startsWith('wing-')), name).toEqual([]);
       expect(Object.keys(c.slots ?? {}).filter((s) => s.startsWith('wing-')), name).toEqual([]);
     }
-    expect(riffClips.wave.bones?.['arm-r']?.rot).toBeDefined();
+    expect(all.wave.params?.raiseR).toBeDefined();
+  });
+
+  it('raiseL/raiseR lift one arm each; wingFold 0.5 is the drawn pose (and the clip rest value)', () => {
+    const at = (params: Record<string, number>) => resolvePose(riff, rig, { ...emptyPose(), params }).channels;
+    expect(at({ raiseR: 1 }).get('arm-r')!.rot).toBeLessThan(-80);
+    expect(at({ raiseR: 1 }).get('arm-l')?.rot ?? 0).toBe(0);
+    expect(at({ raiseL: 1 }).get('arm-l')!.rot).toBeGreaterThan(80);
+    expect(at({ wingFold: 0.5 }).get('arm-l')?.rot ?? 0).toBeCloseTo(0, 9);
+    expect(at({ wingFold: 0 }).get('arm-l')!.rot).toBeGreaterThan(20);
+    expect(riff.restParams?.wingFold).toBe(0.5);
+  });
+
+  it('shared effects are tuned to Riff (tears land on its eyes)', () => {
+    expect(riff.effectParams?.tears).toMatchObject({ eyeX: 68 });
   });
 
   it('tongue-catch: the tongue tip reaches the fly at the zap', async () => {

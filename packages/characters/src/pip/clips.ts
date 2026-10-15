@@ -13,13 +13,6 @@ import { library } from '../library';
 /** Fanned flight feathers on both wings from `t`. */
 const fan = (t = 0): Record<string, [number, string][]> => ({ 'wing-l': [[t, 'fan']], 'wing-r': [[t, 'fan']] });
 
-/** Drop the tracks of bones Pip doesn't have from a library clip. */
-function withoutBones(clip: Clip, names: string[]): Clip['bones'] {
-  const out: NonNullable<Clip['bones']> = {};
-  for (const [b, tracks] of Object.entries(clip.bones ?? {})) if (!names.includes(b)) out[b] = tracks;
-  return out;
-}
-
 /** Repeat a keyframe pattern (times within [0, period)) `n` times from `t0`. */
 function rep(t0: number, period: number, n: number, pattern: Keyframe[], end?: Keyframe): Keyframe[] {
   const out: Keyframe[] = [];
@@ -37,10 +30,11 @@ const pointRight = defineClip({
   description: 'Points to screen-right with the right wing held straight out, leaning and looking that way (draw attention to UI on the right).',
   bones: {
     ...library['point-right'].bones,
-    // Pip's wing hangs down, so pointing sideways is a ~90° raise (Echo's spread wing only dips).
+    // The library's raiseR (0.55) already lifts Pip's hanging wing level; its
+    // wing-r rot (+50, which lowers Echo's raised wing) would undo that, so
+    // Pip only adds a little pointing jab.
     'wing-r': {
-      rot: keys('sineInOut', [0, 0], [0.14, 8], [0.32, -92, 'backOut'], [0.62, -86], [0.78, -94], [1.3, -88], [1.7, 0]),
-      sy: keys('sineInOut', [0, 1], [0.32, 1.18, 'backOut'], [1.3, 1.14], [1.7, 1]),
+      rot: keys('sineInOut', [0, 0], [0.32, -6, 'backOut'], [0.62, 0], [0.78, -8], [1.3, -3], [1.7, 0]),
       x: keys('sineInOut', [0, 0], [0.32, 4], [1.3, 4], [1.7, 0]),
     },
     'wing-l': { rot: keys('sineInOut', [0, 0], [0.32, -6], [1.3, -5], [1.7, 0]) },
@@ -51,30 +45,15 @@ const pipOverrides = {
   'point-right': pointRight,
   'point-left': mirrorClip(pointRight, 'point-left'),
 
-  wave: defineClip({
-    ...library.wave,
-    description: 'Friendly wave: raises the right wing high over the shoulder and waves it (with a 3D wrist turn), head tilted, happy face.',
-    bones: {
-      ...library.wave.bones,
-      'wing-r': {
-        rot: keys('backOut', [0, 0], [0.28, -138], [0.36, -150, 'sineInOut'], [0.5, -118, 'sineInOut'], [0.64, -150, 'sineInOut'],
-          [0.78, -118, 'sineInOut'], [0.92, -150, 'sineInOut'], [1.06, -118, 'sineInOut'], [1.2, -148, 'sineInOut'], [1.5, -132, 'sineInOut'], [1.9, 0]),
-        yaw: library.wave.bones!['wing-r']!.yaw!,
-        sy: keys('sineInOut', [0, 1], [0.28, 1.12], [1.5, 1.12], [1.9, 1]),
-      },
-    },
-  }),
-
   'emote-confused': defineClip({
     ...library['emote-confused'],
-    description: 'Confused: tilts its head one way then the other with a squint, reaches the right wing up to scratch the side of its head; a "?" pops up.',
     bones: {
       ...library['emote-confused'].bones,
+      // the library's raiseR lifts the wing beside the head; bring it in front
+      // of the ball and inward so the tip actually scratches the head
       'wing-r': {
-        rot: keys('sineInOut', [0, 0], [0.85, 0], [1.12, -152], [1.26, -136], [1.38, -152], [1.5, -136], [1.62, -152], [1.76, -140], [2.1, 0]),
-        x: keys('sineInOut', [0, 0], [0.85, 0], [1.12, -12], [1.76, -12], [2.1, 0]),
-        // in front of the ball so the wing tip visibly reaches the side of the head
-        dz: keys('sineInOut', [0, 0], [0.9, 0], [1.0, 60], [1.85, 60], [1.95, 0]),
+        x: keys('sineInOut', [0, 0], [0.9, 0], [1.15, -16], [1.78, -16], [2.1, 0]),
+        dz: keys('sineInOut', [0, 0], [0.95, 0], [1.05, 60], [1.85, 60], [1.95, 0]),
       },
     },
   }),
@@ -92,13 +71,6 @@ const pipOverrides = {
         y: [[0, -6]],
       },
     },
-  }),
-
-  'emote-sad': defineClip({
-    ...library['emote-sad'],
-    bones: withoutBones(library['emote-sad'], ['ear-l', 'ear-r']),
-    // the tears effect defaults to Echo's eye positions; Pip's eyes are wider apart and bigger
-    events: [{ t: 0.7, effect: 'tears', at: 'head', params: { eyeX: 52, eyeY: 54, size: 1.1 } }],
   }),
 
   'fidget-ear-twitch': defineClip({
@@ -273,7 +245,7 @@ export const pipClips: Record<string, Clip> = defineClips({
     suppress: { look: true },
     expression: [[0, 'neutral'], [0.15, 'happy'], [1.2, 'joyful'], [1.6, 'neutral']],
     params: {
-      wingFold: keys('sineInOut', [0, 0], [0.25, 1], [1.05, 1], [1.3, 0]),
+      wingFold: keys('sineInOut', [0, 0.5], [0.25, 1], [1.05, 1], [1.3, 0.5]),
       flap: keys('sineInOut', [0, 0], [1.05, 0], [1.2, 0.5], [1.4, 0], [1.8, 0]),
       squash: keys('sineInOut', [0, 0], [0.12, 0.25], [0.3, -0.05], [1.05, 0], [1.25, 0.15], [1.5, 0]),
     },

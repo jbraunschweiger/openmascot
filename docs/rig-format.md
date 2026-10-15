@@ -49,7 +49,12 @@ transform. Bones nest; a bone's transform applies to everything inside it.
 | `data-om-normal="yaw pitch"` | Direction (degrees) the surface faces at rest. An eye on the left of a round head faces slightly left, e.g. `-25 0`. | `0 0` |
 | `data-om-spring="stiffness damping"` | Secondary motion: the bone's rotation lags/overshoots when its parent accelerates (ears, hair tufts, wings, antennae). | none |
 | `data-om-tip="x y"` | Centre of mass used by the spring (usually the far tip of the ear/wing). | pivot + (0, −30) |
+| `data-om-spring-limit="min max"` | Limits (degrees, + = clockwise, in the bone's own unmirrored sense) for the spring's extra rotation. When the spring reaches a limit it rests against it instead of winding past. Use it so a tuft/ear never swings its base out of the head. | `-55 55` |
 | `data-om-shadow` | Marks the ground shadow bone (must be **outside** `root`). The runtime scales/fades it with the root's height. | — |
+| `data-om-sort-z="n"` | Depth used **only for sorting** among siblings, in place of `z` (rotated like `z`, with the same pivot lever). Parallax and perspective still use `z`. Use it when the pivot's depth isn't the depth of the surface that overlaps the neighbours — e.g. Echo's head (`z 4`, `sort-z 60`: the chin overhangs the chest) and belly (`z 40`, `sort-z 10`). Document order is validated against it. | `z` |
+| `data-om-flat-min="f"` | `flat` only: minimum \|foreshortening\| (0..1). Edge-on, the art keeps this fraction of its width and stays opaque, instead of fading out — a wing or ear seen edge-on still reads as a thin shape. | none (fade) |
+| `data-om-feature-min="f"` | `feature` only: how narrow the feature may foreshorten in profile (0..1). | `0.4` |
+| `data-om-pin="bone x y [bone2 x2 y2 [bone3 x3 y3]]"` | **Skin constraint.** Rest points of this bone's art (absolute coordinates) are glued to wherever the named bones' current transforms carry those same rest points. 1 pin: rotate + stretch about the pivot toward it. 2 pins: exact affine map of the triangle (pivot, pin 1, pin 2). 3 pins: exact affine of the triangle of pins (the pivot then only follows). Pinned bones are solved after the rest of the tree, in document order; they may not pin to their own subtree. Use it for membranes, cloth or skin between two moving parts — pieces that share an edge between the same two pinned points never tear. | none |
 
 ### Layering (z-order)
 
@@ -116,7 +121,11 @@ they make sense (`-l` / `-r` = **screen** left / right):
 | `eye-l`, `eye-r` | eye containers (blink scales these vertically) |
 | `pupil-l`, `pupil-r` | pupils (look-at moves these) |
 | `nose`, `mouth`, `belly` | face / body features |
-| `wing-l`, `wing-r` *(or `arm-l`, `arm-r`)* | forelimbs |
+| `wing-l`, `wing-r` *(or `arm-l`, `arm-r`)* | forelimbs; for a jointed wing this is the **arm** (shoulder pivot), the root of the wing chain |
+| `wing-hand-l`, `wing-hand-r` | wing child at the wrist: inner fingers / membrane wedge |
+| `wing-tip-l`, `wing-tip-r` | child of the hand at the wrist: leading finger + outer membrane (closes over the hand like a fan) |
+| `wing-web-l`, `wing-web-r` / `wing-flank-l`, `wing-flank-r` | pinned skins (membrane between arm and fingers / between fingers and flank) |
+| `wing-root-l`, `wing-root-r` | art-less anchor on the flank (at the wing's depth) that the flank skin is pinned to |
 | `foot-l`, `foot-r` | feet |
 | `shadow` | ground shadow (outside `root`) |
 
@@ -124,8 +133,34 @@ they make sense (`-l` / `-r` = **screen** left / right):
 |---|---|
 | `eye-l`, `eye-r` | `open`, `happy`, `closed`, `heart`, `half`, `angry`, `sad`, `surprised`, `dizzy` |
 | `mouth` | `default`, `smile`, `open`, `tongue`, `o`, `frown`, `grin` |
-| `wing-l`, `wing-r` | `spread`, `folded` |
+| `wing-l`, `wing-r` | `spread`, `folded` (Echo keeps only `spread`: it folds by bones, see below) |
 | `blush` | `off`, `on` |
+
+## Wings: a foldable bone chain (Echo)
+
+A single flat wing bone can only flap. Echo's wing is a small chain that
+folds **by bone motion**, driven by the portable `wingFold` param (0 spread,
+0.5 relaxed, 1 tucked) and `raiseL`/`raiseR`:
+
+```
+body
+ ├─ wing-root-l      anchor on the flank at the wing's depth (no art)
+ └─ wing-l           arm: shoulder → wrist, the light leading-edge rim (flat, spring)
+     ├─ wing-flank-l   skin pinned to wing-root-l + wing-l + wing-hand-l (data-om-pin, 3 pins)
+     ├─ wing-web-l     skin pinned to wing-l + wing-hand-l (2 pins, pivot at the shoulder)
+     └─ wing-hand-l    wrist pivot: finger-5 membrane wedge
+         └─ wing-tip-l   wrist pivot: leading finger + outer membrane
+```
+
+The spread drawing is cut into these pieces along straight lines through the
+wrist, the finger tip between the scallops and the flank, so neighbouring
+pieces share edges between the same pinned points and never tear. Folding
+shortens/turns the arm (scale + a little `yaw` so the folded wing faces
+sideways and reads in profile), swings the fingers down and closes the tip
+over the hand like a fan; the pinned skins follow, and the flank skin keeps
+the membrane's lower edge on the body at every angle. The generator
+(`packages/characters/scripts/echo-src.py`) shows the cutting; the drivers
+are in `packages/characters/src/echo/index.ts`.
 
 ## Validation
 

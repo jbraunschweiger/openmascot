@@ -160,7 +160,13 @@ describe('Pip: character definition', () => {
   });
 
   it('implements the standard portable params (and wingFold)', () => {
-    for (const p of ['lookX', 'lookY', 'blink', 'breathe', 'squash', 'flap', 'lean', 'wingFold']) expect(pip.params?.[p], p).toBeDefined();
+    for (const p of ['lookX', 'lookY', 'blink', 'breathe', 'squash', 'flap', 'lean', 'wingFold', 'raiseL', 'raiseR']) expect(pip.params?.[p], p).toBeDefined();
+  });
+
+  it('rests at wingFold 0.5 (relaxed = as drawn) and lands shared tears on its own eyes', () => {
+    expect(pip.params?.wingFold.default).toBe(0.5);
+    expect(pip.restParams).toEqual({ wingFold: 0.5 });
+    expect(pip.effectParams?.tears).toMatchObject({ eyeX: 52, eyeY: 54 });
   });
 
   it('flap +1 raises both wings out to the sides; wingFold tucks them in', () => {
@@ -177,6 +183,24 @@ describe('Pip: character definition', () => {
     const folded = frameWith({ params: { wingFold: [[0, 1]] } });
     expect(tip(folded, 'l')[0]).toBeGreaterThan(tip(rest, 'l')[0]);
     expect(tip(folded, 'r')[0]).toBeLessThan(tip(rest, 'r')[0]);
+    const spread = frameWith({ params: { wingFold: [[0, 0]] } });
+    expect(tip(spread, 'l')[0]).toBeLessThan(tip(rest, 'l')[0] - 10);
+    expect(tip(spread, 'r')[0]).toBeGreaterThan(tip(rest, 'r')[0] + 10);
+  });
+
+  it('raiseL / raiseR lift one wing: 1 ≈ beside the head, the other wing stays put', () => {
+    const tipY = (m: Mascot, side: 'l' | 'r') => {
+      const b = rig.bonesByName[`wing-${side}`][0];
+      const w = m.current.frame.bones[b.bi].world;
+      const [x, y] = b.spring!.tip;
+      return w[1] * x + w[3] * y + w[5];
+    };
+    const rest = frameWith({});
+    for (const [p, side, other] of [['raiseL', 'l', 'r'], ['raiseR', 'r', 'l']] as const) {
+      const up = frameWith({ params: { [p]: [[0, 1]] } });
+      expect(tipY(up, side), p).toBeLessThan(-150); // wing tip up at head height
+      expect(tipY(up, other), p).toBeCloseTo(tipY(rest, other), 3);
+    }
   });
 
   it('anchors point at existing bones', () => {

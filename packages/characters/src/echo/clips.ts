@@ -18,10 +18,11 @@ export const echoClips: Record<string, Clip> = defineClips({
       head: { rot: cycle(3.2, [0, -3, 0, 3]) },
       'foot-l': { y: [[0, 14]], x: [[0, 8]], dz: [[0, 90]] },
       'foot-r': { y: [[0, 14]], x: [[0, -8]], dz: [[0, 90]] },
-      'wing-l': { rot: [[0, -18]], dz: [[0, 70]], x: [[0, 20]], y: [[0, 22]] },
-      'wing-r': { rot: [[0, 18]], dz: [[0, 68]], x: [[0, -20]], y: [[0, 22]] },
+      // half-folded wings cross over the body like a cocoon, rims meeting in a V
+      'wing-l': { rot: [[0, -35]], dz: [[0, 70]], x: [[0, 30]] },
+      'wing-r': { rot: [[0, 35]], dz: [[0, 68]], x: [[0, -30]] },
     },
-    params: { lookY: cycle(3.2, [-0.1, 0, -0.1, 0]), wingFold: [[0, 1]] },
+    params: { lookY: cycle(3.2, [-0.1, 0, -0.1, 0]), wingFold: [[0, 0.75]] },
   },
 
   fly: {

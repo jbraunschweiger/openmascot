@@ -50,6 +50,9 @@
         <path d="M 50 -26 L 12 -26 C 11 -12 10.5 -6 12 -3 C 13.5 0 18 0 24 0 L 40 0 C 48 0 53 -2 53 -9 C 53 -15 52 -21 50 -26 Z" fill="#fda707"/>
       </g>
       <path d="M 0 -229 C 60.75 -229 110 -179.75 110 -119 C 110 -63.77 60.75 -19 0 -19 C -60.75 -19 -110 -63.77 -110 -119 C -110 -179.75 -60.75 -229 0 -229 Z" fill="#4aacf8"/>
+      <g data-om-bone="belly" data-om-pivot="0 -51" data-om-z="52" data-om-surface="face" data-om-normal="0 20">
+        <path d="M 0 -84 C 30.6 -84 51 -70.8 51 -51 C 51 -31.8 30.6 -19 0 -19 C -30.6 -19 -51 -31.8 -51 -51 C -51 -70.8 -30.6 -84 0 -84 Z" fill="#b4dcfc"/>
+      </g>
       <g data-om-bone="head" data-om-pivot="0 -122" data-om-z="0" data-om-sort-z="53">
         <g data-om-bone="tuft" data-om-pivot="4 -214" data-om-z="-4" data-om-spring="160 9" data-om-tip="18 -270">
           <path d="M -20 -214 C -20.33 -219.67 -18.33 -232 -16 -240 C -13.67 -248 -10 -256.33 -6 -262 C -2 -267.67 3.67 -271.83 8 -274 C 12.33 -276.17 16.83 -276.33 20 -275 C 23.17 -273.67 26.17 -269.83 27 -266 C 27.83 -262.17 26 -256.17 25 -252 C 24 -247.83 19.5 -241.83 21 -241 C 22.5 -240.17 29.33 -245.67 34 -247 C 38.67 -248.33 44.5 -249.33 49 -249 C 53.5 -248.67 58.5 -246.83 61 -245 C 63.5 -243.17 64.67 -240.67 64 -238 C 63.33 -235.33 60.33 -232.17 57 -229 C 53.67 -225.83 47.83 -222.17 44 -219 C 40.17 -215.83 40 -212.17 34 -210 C 28 -207.83 16 -206.67 8 -206 C 0 -205.33 -9.33 -204.67 -14 -206 C -18.67 -207.33 -19.67 -208.33 -20 -214 Z" fill="#4aacf8"/>
@@ -193,7 +196,7 @@
             </g>
           </g>
         </g>
-        <g data-om-bone="nose" data-om-pivot="0 -112" data-om-z="112" data-om-surface="feature">
+        <g data-om-bone="nose" data-om-pivot="0 -112" data-om-z="112" data-om-surface="feature" data-om-feature-min="0.65">
           <g data-om-bone="mouth" data-om-pivot="0 -104" data-om-z="1">
             <g data-om-slot="mouth">
               <g data-om-variant="default">
@@ -243,9 +246,6 @@
             </g>
           </g>
         </g>
-      </g>
-      <g data-om-bone="belly" data-om-pivot="0 -51" data-om-z="52" data-om-surface="face" data-om-normal="0 20">
-        <path d="M 0 -84 C 30.6 -84 51 -70.8 51 -51 C 51 -31.8 30.6 -19 0 -19 C -30.6 -19 -51 -31.8 -51 -51 C -51 -70.8 -30.6 -84 0 -84 Z" fill="#b4dcfc"/>
       </g>
     </g>
   </g>

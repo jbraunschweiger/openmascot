@@ -467,7 +467,7 @@ def build():
         + bone('data-om-bone="cheeks" data-om-pivot="0 -91" data-om-z="60" data-om-surface="face"',
                slot("blush", blush, "off"))
         + eye("l") + eye("r")
-        + bone('data-om-bone="nose" data-om-pivot="0 -112" data-om-z="112" data-om-surface="feature"',
+        + bone('data-om-bone="nose" data-om-pivot="0 -112" data-om-z="112" data-om-surface="feature" data-om-feature-min="0.65"',
                bone('data-om-bone="mouth" data-om-pivot="0 -104" data-om-z="1"',
                     slot("mouth", mouth_variants(), "default")))
     ))
@@ -482,13 +482,11 @@ def build():
         + wing("l") + wing("r")
         + foot("l") + foot("r")
         + [path(BODY, C["body"])]
-        # Document order follows `z` (head 0, belly 52) as the validator wants;
-        # the engine sorts the head by its sort-z (53) and draws it last. They
-        # don't overlap at rest, so the raw SVG previews identically.
-        + head
+        # The head sorts by its sort-z (53), just after the belly (z 52).
         + bone('data-om-bone="belly" data-om-pivot="0 -51" data-om-z="52" '
                'data-om-surface="face" data-om-normal="0 20"',
                [path(BELLY, C["belly"])])
+        + head
     ))
     svg = (
         ['<svg xmlns="http://www.w3.org/2000/svg" viewBox="-150 -284 300 294" data-om-character="pip">',

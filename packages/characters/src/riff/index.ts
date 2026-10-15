@@ -6,10 +6,25 @@
  * Riff-only clips, and Riff versions of library clips that move forelimbs
  * (Riff has front legs `arm-*`, not `wing-*`) — see ./clips.ts.
  */
-import type { CharacterDef } from '@openmascot/core';
+import type { CharacterDef, ParamDriver } from '@openmascot/core';
 import svg from './art.generated';
 import { library } from '../library';
 import { riffClips } from './clips';
+
+/**
+ * One front leg raised: it swings out and up (rather than straight up, where a
+ * body-coloured arm would vanish against the head) and stretches a little.
+ */
+function raiseDrives(side: 'l' | 'r'): ParamDriver[] {
+  const s = side === 'l' ? 1 : -1;
+  return [
+    { bone: `arm-${side}`, channel: 'rot', curve: [[-1, -14 * s], [0, 0], [0.5, 64 * s], [1, 108 * s], [1.5, 130 * s]] },
+    { bone: `arm-${side}`, channel: 'sy', curve: [[0, 0], [0.5, 0.12], [1, 0.28], [1.5, 0.34]] },
+    { bone: `arm-${side}`, channel: 'y', curve: [[-1, -7], [0, 0]] },
+    { bone: `arm-${side}`, channel: 'dz', curve: [[-1, 20], [0, 0]] },
+    { bone: `foot-${side}`, channel: 'rot', curve: [[0, 0], [1, -12 * s], [1.5, -18 * s]] },
+  ];
+}
 
 /** Same expression names as Echo, so `setExpression('happy')` works on every character. */
 export const riffExpressions: CharacterDef['expressions'] = {
@@ -102,8 +117,8 @@ export const riff: CharacterDef = {
       drives: [
         // raised arms swing out rather than straight up and stretch a little,
         // so they clear the big head instead of vanishing against it
-        { bone: 'arm-l', channel: 'rot', curve: [[-1.5, -20], [-1, -14], [0, 0], [1, 74], [1.5, 112]] },
-        { bone: 'arm-r', channel: 'rot', curve: [[-1.5, 20], [-1, 14], [0, 0], [1, -74], [1.5, -112]] },
+        { bone: 'arm-l', channel: 'rot', curve: [[-1.5, -9], [-1, -6], [0, 0], [1, 74], [1.5, 112]] },
+        { bone: 'arm-r', channel: 'rot', curve: [[-1.5, 9], [-1, 6], [0, 0], [1, -74], [1.5, -112]] },
         { bone: 'arm-l', channel: 'sy', curve: [[0, 0], [1, 0.14], [1.5, 0.34]] },
         { bone: 'arm-r', channel: 'sy', curve: [[0, 0], [1, 0.14], [1.5, 0.34]] },
         { bone: 'arm-l', channel: 'y', curve: [[-1.5, -10], [-1, -7], [0, 0]] },
@@ -120,19 +135,34 @@ export const riff: CharacterDef = {
       max: 1.5,
       drives: [{ bone: 'body', channel: 'rot', k: 10 }],
     },
-    /** Wing-fold (0 spread .. 1 folded) for wing rigs; on Riff it hugs the front legs in. */
+    /**
+     * Forelimb fold: 0 = arms spread wide, 0.5 = Riff's natural pose (as
+     * drawn, hence the default), 1 = tucked in toward the belly.
+     */
     wingFold: {
+      default: 0.5,
       min: 0,
       max: 1,
       drives: [
-        { bone: 'arm-l', channel: 'rot', k: -10 },
-        { bone: 'arm-r', channel: 'rot', k: 10 },
-        { bone: 'arm-l', channel: 'x', k: 8 },
-        { bone: 'arm-r', channel: 'x', k: -8 },
+        // tucking is kept small: body-coloured arms crossing the light belly read as a wedge, not a hug
+        { bone: 'arm-l', channel: 'rot', curve: [[0, 34], [0.5, 0], [1, -4]] },
+        { bone: 'arm-r', channel: 'rot', curve: [[0, -34], [0.5, 0], [1, 4]] },
+        { bone: 'arm-l', channel: 'x', curve: [[0.5, 0], [1, 3]] },
+        { bone: 'arm-r', channel: 'x', curve: [[0.5, 0], [1, -3]] },
+        { bone: 'arm-l', channel: 'y', curve: [[0.5, 0], [1, -4]] },
+        { bone: 'arm-r', channel: 'y', curve: [[0.5, 0], [1, -4]] },
       ],
     },
+    /** Raise (and open) the screen-left front leg: 1 ≈ out level with the head, 1.5 = overhead, < 0 = tuck. */
+    raiseL: { min: -1, max: 1.5, drives: raiseDrives('l') },
+    /** Raise the screen-right front leg (mirror of `raiseL`). */
+    raiseR: { min: -1, max: 1.5, drives: raiseDrives('r') },
   },
   clips: { ...library, ...riffClips },
+  // Clips that don't animate the arms keep them in their natural pose.
+  restParams: { wingFold: 0.5 },
+  // Shared effects tuned to Riff's wide-set, high eyes.
+  effectParams: { tears: { eyeX: 68, eyeY: 41, size: 1.15 } },
   anchors: {
     head: { bone: 'head', offset: [0, -100] },
     mouth: { bone: 'mouth' },

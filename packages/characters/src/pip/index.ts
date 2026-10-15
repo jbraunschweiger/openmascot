@@ -14,7 +14,7 @@
  * that natural rest wing, `folded` tucks it tight, `fan` fans the flight
  * feathers out (flying).
  */
-import type { CharacterDef } from '@openmascot/core';
+import type { Channel, CharacterDef, ParamDriver } from '@openmascot/core';
 import svg from './art.generated';
 import { library } from '../library';
 import { pipClips } from './clips';
@@ -37,6 +37,24 @@ export const pipExpressions: CharacterDef['expressions'] = {
   sleepy: { 'eye-l': 'closed', 'eye-r': 'closed', mouth: 'default' },
   proud: { 'eye-l': 'happy', 'eye-r': 'happy', mouth: 'grin' },
 };
+
+/** Wing fold curves for the screen-left wing (the right one mirrors rot and x). */
+const FOLD: Partial<Record<Channel, [number, number][]>> = {
+  rot: [[0, 34], [0.5, 0], [1, -7]],
+  x: [[0, -3], [0.5, 0], [1, 7]],
+  sx: [[0, 0.04], [0.5, 0], [1, -0.3]],
+  sy: [[0, 0.1], [0.5, 0], [1, -0.04]],
+};
+
+function wingFoldDrives(): ParamDriver[] {
+  const out: ParamDriver[] = [];
+  for (const [channel, curve] of Object.entries(FOLD) as [Channel, [number, number][]][]) {
+    out.push({ bone: 'wing-l', channel, curve });
+    const flip = channel === 'rot' || channel === 'x';
+    out.push({ bone: 'wing-r', channel, curve: flip ? curve.map(([a, b]) => [a, -b] as [number, number]) : curve });
+  }
+  return out;
+}
 
 export const pip: CharacterDef = {
   id: 'pip',
@@ -117,23 +135,46 @@ export const pip: CharacterDef = {
       drives: [{ bone: 'body', channel: 'rot', k: 12 }],
     },
     /**
-     * Wing fold: 0 = Pip's natural wings-at-the-sides rest, 1 = tucked tight
-     * against the body (bird wings already rest folded; flap spreads them).
+     * Wing fold (shared semantics): 0 = spread wide (wings lifted out from the
+     * sides), 0.5 = relaxed — Pip's natural wings-at-the-sides rest, exactly
+     * as drawn — 1 = tucked tight against the body.
      */
     wingFold: {
       min: 0,
       max: 1,
+      default: 0.5,
+      drives: wingFoldDrives(),
+    },
+    /** Raise (and open) the screen-left wing: 1 ≈ up beside the head, 1.5 = overhead, < 0 = tuck. */
+    raiseL: {
+      min: -1,
+      max: 1.5,
       drives: [
-        { bone: 'wing-l', channel: 'rot', k: -7 },
-        { bone: 'wing-r', channel: 'rot', k: 7 },
-        { bone: 'wing-l', channel: 'x', k: 7 },
-        { bone: 'wing-r', channel: 'x', k: -7 },
-        { bone: 'wing-l', channel: 'sx', k: -0.3 },
-        { bone: 'wing-r', channel: 'sx', k: -0.3 },
+        { bone: 'wing-l', channel: 'rot', curve: [[-1, -8], [0, 0], [0.5, 85], [1, 148], [1.5, 168]] },
+        { bone: 'wing-l', channel: 'sy', curve: [[-1, -0.1], [0, 0], [1, 0.14], [1.5, 0.18]] },
+        { bone: 'wing-l', channel: 'sx', curve: [[-1, -0.25], [0, 0]] },
+        // past level the wing slides out so it stays visible beside the round head
+        { bone: 'wing-l', channel: 'x', curve: [[0.5, 0], [1, -10], [1.5, -18]] },
+      ],
+    },
+    /** Raise (and open) the screen-right wing (mirror of `raiseL`). */
+    raiseR: {
+      min: -1,
+      max: 1.5,
+      drives: [
+        { bone: 'wing-r', channel: 'rot', curve: [[-1, 8], [0, 0], [0.5, -85], [1, -148], [1.5, -168]] },
+        { bone: 'wing-r', channel: 'sy', curve: [[-1, -0.1], [0, 0], [1, 0.14], [1.5, 0.18]] },
+        { bone: 'wing-r', channel: 'sx', curve: [[-1, -0.25], [0, 0]] },
+        // past level the wing slides out so it stays visible beside the round head
+        { bone: 'wing-r', channel: 'x', curve: [[0.5, 0], [1, 10], [1.5, 18]] },
       ],
     },
   },
   clips: { ...library, ...pipClips },
+  // Clips that don't animate the wings keep them relaxed (as drawn), not spread.
+  restParams: { wingFold: 0.5 },
+  // Shared effects tuned for Echo's face: land the tears on Pip's bigger, wider-set eyes.
+  effectParams: { tears: { eyeX: 52, eyeY: 54, size: 1.1 } },
   anchors: {
     head: { bone: 'head', offset: [0, -40] },
     mouth: { bone: 'nose', offset: [0, 6] },

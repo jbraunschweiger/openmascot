@@ -167,17 +167,17 @@ export const gesturesClips = defineClips({
       lookX: keys('sineInOut', [0, -0.45], [1.6, -0.35], [3.2, -0.45]),
       lookY: keys('sineInOut', [0, -0.5], [1.6, -0.4], [3.2, -0.5]),
       lean: [[0, -0.06]],
+      // the right wing tucks in (raise < 0 folds it) …
+      raiseR: [[0, -1]],
     },
     bones: {
       head: { rot: keys('sineInOut', [0, -9], [1.6, -6], [3.2, -9]) },
-      // right wing folds up toward the chin and taps
+      // … and swings across the chest in front of the body, tip tapping the chin
       'wing-r': {
-        rot: keys('sineInOut', [0, 52], [0.5, 52], [0.62, 46], [0.74, 52], [0.86, 46], [1.0, 52], [3.2, 52]),
-        x: [[0, -26]],
-        y: [[0, -16]],
-        dz: [[0, 60]],
-        sx: [[0, 0.48]],
-        sy: [[0, 0.8]],
+        rot: keys('sineInOut', [0, 80], [0.5, 80], [0.62, 72], [0.74, 80], [0.86, 72], [1.0, 80], [3.2, 80]),
+        x: [[0, -18]],
+        y: [[0, 10]],
+        dz: [[0, 100]],
       },
       'wing-l': { rot: [[0, -10]] },
       'foot-l': { rot: keys('sineInOut', [0, 0], [1.8, 0], [1.9, 12], [2.0, 0], [2.1, 12], [2.2, 0], [3.2, 0]) },

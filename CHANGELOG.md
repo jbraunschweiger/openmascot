@@ -41,6 +41,25 @@ First public version.
 - **Characters**: Echo the bat (16 expressions, folding wings, spring ears
   and tuft, back details) and a shared clip library — idle, fidgets,
   emotions, gestures, 19 beat-synced dances — plus Echo-only poses and flight.
+- **Rig features for multi-bone limbs and cleaner turns**:
+  `data-om-sort-z` (sort depth separate from parallax `z`),
+  `data-om-pin` (skin constraint: 1–3 rest points glued to other bones —
+  membranes that stay attached to body and limb), `data-om-flat-min`
+  (edge-on flat parts keep a thin opaque sliver instead of fading),
+  `data-om-feature-min` (how narrow a `feature` gets in profile),
+  `data-om-spring-limit` (per-bone spring angle limits; default ±55°).
+- **Params**: `ParamDriver.input` (drive from a weighted sum of params, e.g.
+  `{ wingFold: 1, raiseL: -1 }`), `CharacterDef.restParams` (values a clip
+  pose starts from for params it doesn't animate — e.g. relaxed wings —
+  without changing the rest drawing), `CharacterDef.effectParams`
+  (per-character effect defaults merged under emission params). New portable
+  params `wingFold` (0 spread … 0.5 relaxed … 1 tucked) and `raiseL`/`raiseR`
+  (lift and open one wing) used throughout the clip library.
+- **Echo's wings** are a bone chain (`wing-l` arm → `wing-hand-l` →
+  `wing-tip-l`, pinned skins `wing-web-l`/`wing-flank-l`, anchor
+  `wing-root-l`; mirrored for `-r`) that folds smoothly by bone motion: idle
+  is relaxed, dances/emotes spread, sad/shy/unimpressed/cloak/hang/sleepy
+  tuck. The `folded` wing slot variant is gone (slot kept with `spread`).
 - **CLI**: `validate`, `list`, `lint`, `render`, `framesheet` (clips,
   transitions, expressions, sweeps, params, per-beat sampling) and an effects
   review sheet.
@@ -68,5 +87,15 @@ First public version.
 
 ### Fixed
 
+- Echo: the chest/body no longer pops over the chin when the body pitches
+  or yaws (head and belly sort by `data-om-sort-z`), the membrane's lower
+  edge stays on the flank in every wing pose, the spin no longer shows an
+  X of membranes from behind or ghostly edge-on wings/ears, and the tuft
+  and ears can't swing their base out of the head (limits + tucked roots).
+- Children of foreshortened (`flat`/`face`/`feature`) bones were
+  foreshortened twice when their parent turned (offsets now projected once).
+- Children of a surface with a `normal` (pupils in a sideways-facing eye)
+  sort by that surface's facing, so a visible eye never loses its pupil.
+- The validator compares document order with `data-om-sort-z` when present.
 - Perspective no longer enlarges near parts (eyes, snout) in the rest pose.
 - A clip's `shadow` factor now applies even when the root bone is at rest.

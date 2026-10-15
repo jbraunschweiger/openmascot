@@ -20,6 +20,10 @@ import { library } from '../library';
 /* ------------------------------------------------------------------ */
 
 /**
+ * Most library clips now drive forelimbs through portable params (`flap`,
+ * `wingFold`, `raiseL`/`raiseR`, mapped in ./index.ts); this handles the
+ * remaining direct `wing-*` keys.
+ *
  * Echo-style wings rest spread sideways and rise with |rot| ≈ 50–80°; Riff's
  * arms hang straight down, so raising them needs about twice the angle (and a
  * little stretch to clear the head). Lowering / folding a wing (toward the
@@ -33,17 +37,22 @@ function armRot(wingRot: number, side: 'l' | 'r'): number {
 }
 const armStretch = (armRotDeg: number) => 1 + 0.32 * Math.min(1, Math.abs(Math.max(0, armRotDeg)) / 110);
 
-function retargetLimb(tracks: Tracks, side: 'l' | 'r'): { arm: Tracks; hand: Tracks } {
+function retargetLimb(tracks: Tracks, side: 'l' | 'r', flourish: boolean): { arm: Tracks; hand: Tracks } {
   const arm: Tracks = {};
   const hand: Tracks = {};
-  if (tracks.rot) {
+  if (tracks.rot && flourish) {
+    // the limb is already raised by raiseL/raiseR: the wing key is a small accent
+    arm.rot = tracks.rot.map(([t, v, e]) => [t, v * 0.6, e ?? 'sineInOut'] as Keyframe);
+  } else if (tracks.rot) {
     arm.rot = tracks.rot.map(([t, v, e]) => [t, armRot(v, side), e ?? 'sineInOut'] as Keyframe);
     // stretch with the raise (signed so it's always "how far up")
     arm.sy = tracks.rot.map(([t, v, e]) => [t, armStretch(side === 'r' ? -armRot(v, side) : armRot(v, side)), e ?? 'sineInOut'] as Keyframe);
   }
   // a 3D wrist turn on a wing becomes a hand wiggle
   if (tracks.yaw) hand.rot = tracks.yaw.map(([t, v, e]) => [t, (side === 'r' ? 1 : -1) * v * 0.9, e ?? 'sineInOut'] as Keyframe);
-  for (const ch of ['x', 'y', 'dz', 'opacity'] as Channel[]) if (tracks[ch]) arm[ch] = tracks[ch];
+  for (const ch of ['y', 'dz', 'opacity'] as Channel[]) if (tracks[ch]) arm[ch] = tracks[ch];
+  // sideways wing shifts (hugs) would slide the arms across the belly
+  if (tracks.x) arm.x = tracks.x.map(([t, v, e]) => [t, v * 0.3, e ?? 'sineInOut'] as Keyframe);
   return { arm, hand };
 }
 
@@ -68,7 +77,8 @@ export function armsFromWings(clip: Clip): Clip {
     const wing = bones[`wing-${side}`];
     if (!wing) continue;
     delete bones[`wing-${side}`];
-    const { arm, hand } = retargetLimb(wing, side);
+    const raised = !!clip.params?.[side === 'l' ? 'raiseL' : 'raiseR'];
+    const { arm, hand } = retargetLimb(wing, side, raised);
     bones[`arm-${side}`] = { ...arm, ...bones[`arm-${side}`] };
     if (Object.keys(hand).length) bones[`foot-${side}`] = { ...hand, ...bones[`foot-${side}`] };
   }
@@ -335,9 +345,6 @@ const ownClips = defineClips({
 /* Riff versions of library clips                                      */
 /* ------------------------------------------------------------------ */
 
-/** Tears effect positioned for Riff's eyes (they sit wider and higher than Echo's). */
-const sadEyes = { eyeX: 68, eyeY: 41, size: 1.15 };
-
 /** Without the given bones' tracks. */
 function without(clip: Clip, ...names: string[]): Clip {
   const bones = { ...(clip.bones ?? {}) };
@@ -345,9 +352,16 @@ function without(clip: Clip, ...names: string[]): Clip {
   return { ...clip, bones };
 }
 
+/** `clip` without the `raiseL`/`raiseR` params (for Riff versions that key the arms directly). */
+function withoutRaise(clip: Clip): Record<string, Keyframe[]> {
+  return Object.fromEntries(Object.entries(clip.params ?? {}).filter(([k]) => !k.startsWith('raise')));
+}
+
 /** A frog's arm is far too short to reach its head: point straight out instead of a wing's angled point. */
 const pointRight: Clip = {
   ...without(retargeted['point-right'], 'arm-r', 'arm-l'),
+  // arms keyed directly below; the shared raise would stack on top
+  params: withoutRaise(library['point-right']),
   description: 'Points to screen-right with the right front leg held straight out, leaning and looking that way (draw attention to UI on the right).',
   bones: {
     ...without(retargeted['point-right'], 'arm-r', 'arm-l').bones,
@@ -360,12 +374,19 @@ const pointRight: Clip = {
   },
 };
 
-const overrides = defineClips({
-  'emote-sad': {
-    ...(retargeted['emote-sad'] ?? library['emote-sad']),
-    events: (library['emote-sad'].events ?? []).map((e) => (e.effect === 'tears' ? { ...e, params: { ...e.params, ...sadEyes } } : e)),
-  },
+/** Shrug keys for one arm (1.0 → 2.1 s): out and up, palm turned up. */
+function shrug(side: 'l' | 'r', s: number): Record<string, Tracks> {
+  return {
+    [`arm-${side}`]: {
+      rot: keys('sineInOut', [0, 0], [1.0, 0], [1.22, 80 * s, 'backOut'], [1.8, 76 * s], [2.1, 0]),
+      sy: keys('sineInOut', [0, 1], [1.0, 1], [1.22, 1.15], [1.8, 1.14], [2.1, 1]),
+      y: keys('sineInOut', [0, 0], [1.0, 0], [1.22, -6], [1.8, -6], [2.1, 0]),
+    },
+    [`foot-${side}`]: { rot: keys('sineInOut', [0, 0], [1.0, 0], [1.22, -70 * s], [1.8, -66 * s], [2.1, 0]) },
+  };
+}
 
+const overrides = defineClips({
   'point-right': pointRight,
   'point-left': { ...mirrorClip(pointRight, 'point-left'), description: 'Mirror of point-right: points to screen-left with the left front leg.' },
 
@@ -379,15 +400,16 @@ const overrides = defineClips({
     },
   },
 
+
+  // One arm raised to "scratch" reads as pointing on a frog (it can't reach its head): shrug instead.
   'emote-confused': {
-    ...without(retargeted['emote-confused'], 'arm-r', 'arm-l'),
+    ...without(retargeted['emote-confused'], 'arm-r', 'arm-l', 'foot-r'),
     description: 'Confused: tilts its head one way then the other with a squint, then a big two-armed shrug; a "?" pops up.',
+    params: withoutRaise(library['emote-confused']),
     bones: {
-      ...without(retargeted['emote-confused'], 'arm-r', 'arm-l').bones,
-      'arm-l': { rot: keys('sineInOut', [0, 0], [1.0, 0], [1.22, 80, 'backOut'], [1.8, 76], [2.1, 0]), sy: keys('sineInOut', [0, 1], [1.0, 1], [1.22, 1.15], [1.8, 1.14], [2.1, 1]), y: keys('sineInOut', [0, 0], [1.0, 0], [1.22, -6], [1.8, -6], [2.1, 0]) },
-      'arm-r': { rot: keys('sineInOut', [0, 0], [1.0, 0], [1.22, -80, 'backOut'], [1.8, -76], [2.1, 0]), sy: keys('sineInOut', [0, 1], [1.0, 1], [1.22, 1.15], [1.8, 1.14], [2.1, 1]), y: keys('sineInOut', [0, 0], [1.0, 0], [1.22, -6], [1.8, -6], [2.1, 0]) },
-      'foot-l': { rot: keys('sineInOut', [0, 0], [1.0, 0], [1.22, -70], [1.8, -66], [2.1, 0]) },
-      'foot-r': { rot: keys('sineInOut', [0, 0], [1.0, 0], [1.22, 70], [1.8, 66], [2.1, 0]) },
+      ...without(retargeted['emote-confused'], 'arm-r', 'arm-l', 'foot-r').bones,
+      ...shrug('l', 1),
+      ...shrug('r', -1),
     },
   },
 });
