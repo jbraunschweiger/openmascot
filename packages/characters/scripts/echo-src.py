@@ -538,17 +538,164 @@ def mouth_variants():
 
 
 # ================================================================ assemble
+# ================================================================ wing rig
+# The spread wing above is the art; here it is cut into rigid pieces that a
+# small bone chain can fold (docs/rig-format.md, "Wings"):
+#
+#   wing-l        shoulder S → wrist W: the arm (leading-edge rim)
+#     wing-web-l    skin between arm and finger 5, pinned to arm + hand
+#     wing-flank-l  skin between finger 5 and the flank, pinned to body + arm + hand
+#     wing-hand-l   wrist W: finger 5 wedge of membrane
+#       wing-tip-l    wrist W: leading finger + outer membrane (closes like a fan)
+#
+# All pieces meet along straight cuts through W, P2 (tip of finger 5), S and
+# B (where the membrane meets the flank), and pinned skins map exactly onto
+# those cuts, so the membrane never tears and its bottom stays on the body.
+WS = (-63, -98)          # shoulder (wing-l pivot)
+WW = (-137, -165)        # wrist (hand/tip pivot), centre of the rim band at the peak
+WP2 = (-117.5, -39)      # tip of finger 5 (point between the two scallops)
+WM = (-166, -77.5)       # trailing-edge point where the fan splits (finger 4)
+WB = (-48, -36)          # membrane meets the flank (pinned to the body)
+CAP_R = 8.6              # rim joint cap at the wrist
+
+
+def sample(d, n=14):
+    """Polyline of an absolute M/L/C/Z path."""
+    toks = re.findall(r"[MLCZ]|-?\d*\.?\d+", d)
+    pts, i, cur = [], 0, None
+    while i < len(toks):
+        t = toks[i]
+        if t == "M":
+            cur = (float(toks[i + 1]), float(toks[i + 2]))
+            pts.append(cur)
+            i += 3
+        elif t == "L":
+            cur = (float(toks[i + 1]), float(toks[i + 2]))
+            pts.append(cur)
+            i += 3
+        elif t == "C":
+            c1 = (float(toks[i + 1]), float(toks[i + 2]))
+            c2 = (float(toks[i + 3]), float(toks[i + 4]))
+            e = (float(toks[i + 5]), float(toks[i + 6]))
+            for k in range(1, n + 1):
+                u = k / n
+                v = 1 - u
+                pts.append((v * v * v * cur[0] + 3 * v * v * u * c1[0] + 3 * v * u * u * c2[0] + u * u * u * e[0],
+                            v * v * v * cur[1] + 3 * v * v * u * c1[1] + 3 * v * u * u * c2[1] + u * u * u * e[1]))
+            cur = e
+            i += 7
+        else:  # Z
+            i += 1
+    return pts
+
+
+def clip_half(poly, a, b, keep_left=True):
+    """Sutherland-Hodgman: keep the part of `poly` left (screen: cross >= 0) of a->b."""
+    def side(p):
+        v = (b[0] - a[0]) * (p[1] - a[1]) - (b[1] - a[1]) * (p[0] - a[0])
+        return v if keep_left else -v
+    out = []
+    n = len(poly)
+    for i in range(n):
+        p, q = poly[i], poly[(i + 1) % n]
+        sp, sq = side(p), side(q)
+        if sp >= 0:
+            out.append(p)
+        if (sp >= 0) != (sq >= 0):
+            t = sp / (sp - sq)
+            out.append((p[0] + (q[0] - p[0]) * t, p[1] + (q[1] - p[1]) * t))
+    return out
+
+
+def clip_all(poly, cuts):
+    for a, b, keep in cuts:
+        if len(poly) < 3:
+            return []
+        poly = clip_half(poly, a, b, keep)
+    return poly
+
+
+def poly_d(poly):
+    out, last = [], None
+    for p in poly:
+        q = (round(p[0], 1), round(p[1], 1))
+        if q != last:
+            out.append(q)
+        last = q
+    if len(out) < 3:
+        return None
+    return "M " + " L ".join(f"{f(x)} {f(y)}" for x, y in out) + " Z"
+
+
+def toward(a, b, k):
+    return (a[0] + (b[0] - a[0]) * k, a[1] + (b[1] - a[1]) * k)
+
+
+def wing_pieces():
+    """Left-wing art per bone: {piece: [(d, colour), ...]} in back-to-front order."""
+    layers = [(WING_OUT, C["rim"]), (WING_MEM, C["mem_mid"]), (WING_PANEL_A, C["mem_dark"]),
+              (WING_PANEL_C, C["mem_dark"]), (WING_RIM, C["rim"])]
+    polys = [(sample(d), col) for d, col in layers]
+    up = (WW[0], WW[1] - 400)
+    far = lambda q, k=6: toward(WW, q, k)
+    # sectors around the wrist (screen angles grow clockwise)
+    tip = [(WW, far(WM), True), (up, WW, True)]                 # W->M ... up: leading finger
+    hand = [(WW, far(WP2), True), (WW, far(WM), False)]          # finger 5 .. finger 4
+    arm = [(up, WW, False), (WW, far(WP2), False)]               # up ... finger 5 (arm side)
+    # arm-side membrane splits along S->P2 into the web (above) and flank (below);
+    # both tuck under the rim (cut along S->W) and the flank under the body (S->B)
+    web = arm + [(WS, WW, False), (WS, WP2, True)]
+    flank = arm + [(WS, WP2, False), (toward(WS, WB, -0.2), toward(WB, WS, -2), False)]
+    pieces = {}
+    for name, cuts, which in (("tip", tip, None), ("hand", hand, None), ("web", web, "mem"),
+                              ("flank", flank, "mem"), ("arm", arm, "rim")):
+        out = []
+        for i, (poly, col) in enumerate(polys):
+            if which == "mem" and i == 4:
+                continue  # the rim belongs to the arm bone
+            if which == "rim" and i != 4:
+                continue
+            d = poly_d(clip_all(poly, cuts))
+            if d:
+                out.append((d, col))
+        pieces[name] = out
+    return pieces
+
+
+def wing_root(side):
+    """Art-less anchor where the membrane meets the flank: a body point at the
+    wing's depth, so the pinned skin turns in 3D with the wing."""
+    s = -1 if side == "l" else 1
+    return [f'<g data-om-bone="wing-root-{side}" data-om-pivot="{f(-s * WB[0])} {f(WB[1])}" data-om-z="-20"/>']
+
+
 def wing(side):
     m = (lambda d: d) if side == "l" else mirror
     s = -1 if side == "l" else 1
-    spread = [path(m(WING_OUT), C["rim"]), path(m(WING_MEM), C["mem_mid"]),
-              path(m(WING_PANEL_A), C["mem_dark"]), path(m(WING_PANEL_C), C["mem_dark"]),
-              path(m(WING_RIM), C["rim"])]
-    folded = [path(m(FOLD_OUT), C["rim"]), path(m(FOLD_MEM), C["mem_mid"]),
-              path(m(FOLD_PANEL), C["mem_dark"]), path(m(FOLD_RIM), C["rim"])]
-    head = (f'<g data-om-bone="wing-{side}" data-om-pivot="{s * 68} -104" data-om-z="-20" '
-            f'data-om-surface="flat" data-om-spring="90 9" data-om-tip="{s * 196} -72">')
-    return [head] + ["  " + l for l in slot(f"wing-{side}", {"spread": spread, "folded": folded}, "spread")] + ["</g>"]
+    X = lambda p: f"{f(-s * p[0])} {f(p[1])}"
+    pcs = wing_pieces()
+    cap = path(m(blob(WW[0], WW[1], CAP_R, CAP_R)), C["rim"])
+    art = lambda k: ["  " + path(m(d), col) for d, col in pcs[k]]
+    lines = [
+        f'<g data-om-bone="wing-{side}" data-om-pivot="{X(WS)}" data-om-z="-20" data-om-surface="flat" '
+        f'data-om-spring="90 9" data-om-tip="{s * 196} -72">',
+        # pinned skins sort far behind the rest of the wing (they are the membrane)
+        f'  <g data-om-bone="wing-flank-{side}" data-om-pivot="{X(WB)}" data-om-sort-z="-400" '
+        f'data-om-pin="wing-root-{side} {X(WB)} wing-{side} {X(WS)} wing-hand-{side} {X(WP2)}">',
+    ] + ["  " + l for l in art("flank")] + [
+        "  </g>",
+        f'  <g data-om-bone="wing-web-{side}" data-om-pivot="{X(WS)}" data-om-sort-z="-400" '
+        f'data-om-pin="wing-{side} {X(WW)} wing-hand-{side} {X(WP2)}">',
+    ] + ["  " + l for l in art("web")] + ["  </g>"] + art("arm") + ["  " + cap] + [
+        f'  <g data-om-bone="wing-hand-{side}" data-om-pivot="{X(WW)}" data-om-surface="flat">',
+    ] + ["  " + l for l in art("hand")] + [
+        f'    <g data-om-bone="wing-tip-{side}" data-om-pivot="{X(WW)}" data-om-z="1" data-om-surface="flat">',
+    ] + ["    " + l for l in slot(f"wing-{side}", {"spread": [x[2:] for x in art("tip")] + [cap]}, "spread")] + [
+        "    </g>",
+        "  </g>",
+        "</g>",
+    ]
+    return lines
 
 
 def eye(side):
@@ -618,7 +765,7 @@ def build():
     )
     body = (
         ['<g data-om-bone="body" data-om-pivot="0 -75">']
-        + ["  " + l for l in wing("l") + wing("r")]
+        + ["  " + l for l in wing_root("l") + wing_root("r") + wing("l") + wing("r")]
         + ["  " + l for l in [
             '<g data-om-bone="body-back" data-om-pivot="0 -75" data-om-z="-12" data-om-surface="back">',
             "  " + path(BODY_BACK, C["back_dark"]),

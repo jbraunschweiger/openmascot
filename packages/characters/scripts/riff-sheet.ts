@@ -12,7 +12,7 @@
 import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { Resvg } from '@resvg/resvg-js';
 import { Mascot, renderSvg } from '@openmascot/core';
-import { clipSheet, composeSheet, expressionSheet, sweepSheet } from '../../cli/src/sheet';
+import { clipFrames, clipSheet, composeSheet, expressionSheet, sweepSheet } from '../../cli/src/sheet';
 import { riff } from '../src/riff';
 import { echo } from '../src/echo';
 
@@ -85,9 +85,41 @@ switch (cmd) {
     const from = flag('from');
     const perBeat = flag('per-beat');
     png(
-      clipSheet(riff, name, { frames: +frames, from, perBeat: perBeat ? +perBeat : undefined, tile: 170, cols: +(flag('cols') ?? 6), padding: 70 }),
+      clipSheet(riff, name, {
+        frames: +frames, from, perBeat: perBeat ? +perBeat : undefined, tile: +(flag('tile') ?? 170), cols: +(flag('cols') ?? 6), padding: +(flag('pad') ?? 70),
+        start: flag('start') ? +flag('start')! : undefined, duration: flag('duration') ? +flag('duration')! : undefined, bpm: flag('bpm') ? +flag('bpm')! : undefined,
+      }),
       `clip-${name}${from ? `-from-${from}` : ''}.png`,
     );
+    break;
+  }
+  case 'rows': {
+    // rows <out-name> clipA clipB … [--frames 8] [--from idle]: one row per clip
+    const [outName, ...names] = pos;
+    const frames = +(flag('frames') ?? 8);
+    const tiles: { label: string; svg: string }[] = [];
+    for (const name of names) {
+      const fr = clipFrames(riff, name, { frames, from: flag('from'), perBeat: flag('per-beat') ? +flag('per-beat')! : undefined });
+      const m = fr[0].mascot;
+      fr.slice(0, frames).forEach((f, i) =>
+        tiles.push({ label: i === 0 ? `${name}` : `${f.time.toFixed(2)}s`, svg: renderSvg(m.rig, f.frame.frame, { padding: +(flag('pad') ?? 80), particles: f.frame.particles }) }),
+      );
+    }
+    png(composeSheet(tiles, { cols: frames, tile: +(flag('tile') ?? 130), title: `Riff — ${outName}` }), `rows-${outName}.png`);
+    break;
+  }
+  case 'poses': {
+    // poses '<label>=<json bones>' … e.g. 'a={"leg-l":{"rot":-40}}'
+    const m = new Mascot(riff, { alive: false, initial: '__none__' });
+    const tiles = pos.map((spec) => {
+      const [label, json] = spec.split('=');
+      const bones = JSON.parse(json) as Record<string, Record<string, number>>;
+      const clip = { name: 'p', duration: 1, bones: Object.fromEntries(Object.entries(bones).map(([b, chs]) => [b, Object.fromEntries(Object.entries(chs).map(([c, v]) => [c, [[0, v]]]))])) };
+      m.play(clip as never, { fade: 0, then: null });
+      m.update(0);
+      return { label, svg: renderSvg(m.rig, m.current.frame, { padding: 110 }) };
+    });
+    png(composeSheet(tiles, { cols: Math.min(4, tiles.length), tile: 260, title: 'poses' }), 'poses.png');
     break;
   }
   default:

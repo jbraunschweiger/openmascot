@@ -13,7 +13,7 @@
  */
 import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
-import { characters } from '@openmascot/characters';
+import { characters, library } from '@openmascot/characters';
 import { compileRig, describeRig, lintClip, Mascot, renderSvg, type CharacterDef, type RigWarning } from '@openmascot/core';
 import { clipSheet, expressionSheet, sweepSheet } from './sheet';
 
@@ -110,8 +110,17 @@ async function main() {
       const bones = new Set(Object.keys(m.rig.bonesByName));
       const params = new Set(Object.keys(c.params ?? {}));
       let bad = 0;
+      let warned = 0;
       for (const [n, clip] of Object.entries(m.clips)) {
-        const probs = lintClip(clip, bones, params);
+        let probs = lintClip(clip, bones, params);
+        // Shared library clips may animate bones a character doesn't have
+        // (e.g. ears on a bird): the solver ignores them, so only warn.
+        if (library[n] && (!c.clips?.[n] || c.clips[n] === library[n])) {
+          const missing = probs.filter((p) => p.startsWith('unknown bone'));
+          probs = probs.filter((p) => !p.startsWith('unknown bone'));
+          if (missing.length && flags.verbose) console.log(`⚠ ${n}: ${missing.join(', ')}`);
+          if (missing.length) warned++;
+        }
         for (const e of clip.events ?? []) if (!m.effects[e.effect]) probs.push(`unknown effect "${e.effect}"`);
         for (const [, e] of clip.expression ?? []) if (!c.expressions[e]) probs.push(`unknown expression "${e}"`);
         if (probs.length) {
@@ -119,7 +128,8 @@ async function main() {
           console.log(`✗ ${n}\n  - ${probs.join('\n  - ')}`);
         }
       }
-      console.log(bad ? `${bad} clip(s) with problems` : `✓ ${Object.keys(m.clips).length} clips OK`);
+      const note = warned ? ` (${warned} library clip(s) touch bones ${c.name} doesn't have; --verbose to list)` : '';
+      console.log(bad ? `${bad} clip(s) with problems${note}` : `✓ ${Object.keys(m.clips).length} clips OK${note}`);
       process.exitCode = bad ? 1 : 0;
       break;
     }

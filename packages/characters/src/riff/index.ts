@@ -100,14 +100,18 @@ export const riff: CharacterDef = {
       min: -1.5,
       max: 1.5,
       drives: [
-        { bone: 'arm-l', channel: 'rot', curve: [[-1.5, -20], [-1, -14], [0, 0], [1, 70], [1.5, 130]] },
-        { bone: 'arm-r', channel: 'rot', curve: [[-1.5, 20], [-1, 14], [0, 0], [1, -70], [1.5, -130]] },
+        // raised arms swing out rather than straight up and stretch a little,
+        // so they clear the big head instead of vanishing against it
+        { bone: 'arm-l', channel: 'rot', curve: [[-1.5, -20], [-1, -14], [0, 0], [1, 74], [1.5, 112]] },
+        { bone: 'arm-r', channel: 'rot', curve: [[-1.5, 20], [-1, 14], [0, 0], [1, -74], [1.5, -112]] },
+        { bone: 'arm-l', channel: 'sy', curve: [[0, 0], [1, 0.14], [1.5, 0.34]] },
+        { bone: 'arm-r', channel: 'sy', curve: [[0, 0], [1, 0.14], [1.5, 0.34]] },
         { bone: 'arm-l', channel: 'y', curve: [[-1.5, -10], [-1, -7], [0, 0]] },
         { bone: 'arm-r', channel: 'y', curve: [[-1.5, -10], [-1, -7], [0, 0]] },
         { bone: 'arm-l', channel: 'dz', curve: [[-1.5, 30], [0, 0]] },
         { bone: 'arm-r', channel: 'dz', curve: [[-1.5, 30], [0, 0]] },
-        { bone: 'foot-l', channel: 'rot', curve: [[0, 0], [1, -20], [1.5, -40]] },
-        { bone: 'foot-r', channel: 'rot', curve: [[0, 0], [1, 20], [1.5, 40]] },
+        { bone: 'foot-l', channel: 'rot', curve: [[0, 0], [1, -12], [1.5, -18]] },
+        { bone: 'foot-r', channel: 'rot', curve: [[0, 0], [1, 12], [1.5, 18]] },
       ],
     },
     /** Lean the whole body (-1..1 → ±10°). */

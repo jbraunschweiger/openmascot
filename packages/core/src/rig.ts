@@ -116,6 +116,12 @@ export function compileRig(svgSource: string, opts: CompileOptions = {}): Rig {
       if (limit && !springNums) warnings.push({ bone: name, message: `Bone "${name}" has data-om-spring-limit but no data-om-spring` });
       const sortZ = a['data-om-sort-z'] != null ? nums(a['data-om-sort-z'], 1, `sort-z of "${name}"`)![0] : undefined;
       const pin = parsePins(a['data-om-pin'], name);
+      const flatMin = a['data-om-flat-min'] != null ? nums(a['data-om-flat-min'], 1, `flat-min of "${name}"`)![0] : undefined;
+      if (flatMin !== undefined && !(flatMin >= 0 && flatMin <= 1)) throw new RigError(`Invalid flat-min of "${name}": expected 0..1`);
+      const featureMin = a['data-om-feature-min'] != null ? nums(a['data-om-feature-min'], 1, `feature-min of "${name}"`)![0] : undefined;
+      if (featureMin !== undefined && !(featureMin >= 0 && featureMin <= 1)) throw new RigError(`Invalid feature-min of "${name}": expected 0..1`);
+      if (featureMin !== undefined && surface !== 'feature') warnings.push({ bone: name, message: `Bone "${name}" has data-om-feature-min but is not a feature surface` });
+      if (flatMin !== undefined && surface !== 'flat') warnings.push({ bone: name, message: `Bone "${name}" has data-om-flat-min but is not a flat surface` });
       const bone: BoneNode = {
         kind: 'bone',
         index: nodeIndex++,
@@ -128,6 +134,8 @@ export function compileRig(svgSource: string, opts: CompileOptions = {}): Rig {
         spring: springNums ? { stiffness: springNums[0], damping: springNums[1], tip, ...(limit ? { limit } : {}) } : undefined,
         shadow: 'data-om-shadow' in a || undefined,
         ...(sortZ !== undefined ? { sortZ } : {}),
+        ...(flatMin !== undefined ? { flatMin } : {}),
+        ...(featureMin !== undefined ? { featureMin } : {}),
         ...(pin ? { pin } : {}),
         attrs: stripOm(a),
         children: [],
@@ -209,7 +217,8 @@ export function compileRig(svgSource: string, opts: CompileOptions = {}): Rig {
   const checkOrder = (children: RigNode[], where: string) => {
     let last = -Infinity;
     for (const c of children) {
-      const z = c.kind === 'art' ? 0 : c.z;
+      // bones sort by data-om-sort-z when present (see solve.ts)
+      const z = c.kind === 'art' ? 0 : c.kind === 'bone' && c.sortZ !== undefined ? c.sortZ : c.z;
       if (z < last) {
         warnings.push({ message: `In ${where}: z-order differs from document order (z=${z} after z=${last}); the raw SVG preview will not match the engine` });
         break;
@@ -246,12 +255,13 @@ export function compileRig(svgSource: string, opts: CompileOptions = {}): Rig {
 function parsePins(s: string | undefined, name: string): PinDef[] | undefined {
   if (s == null) return undefined;
   const t = s.trim().split(/[\s,;]+/).filter(Boolean);
-  if (t.length !== 3 && t.length !== 6) throw new RigError(`Invalid pin of "${name}": "${s}" (expected "bone x y" or "bone x y bone2 x2 y2")`);
+  const usage = `Invalid pin of "${name}": "${s}" (expected 1–3 groups of "bone x y")`;
+  if (t.length === 0 || t.length % 3 !== 0 || t.length > 9) throw new RigError(usage);
   const out: PinDef[] = [];
   for (let i = 0; i < t.length; i += 3) {
     const x = Number(t[i + 1]);
     const y = Number(t[i + 2]);
-    if (!Number.isFinite(x) || !Number.isFinite(y) || Number.isFinite(Number(t[i]))) throw new RigError(`Invalid pin of "${name}": "${s}" (expected "bone x y" or "bone x y bone2 x2 y2")`);
+    if (!Number.isFinite(x) || !Number.isFinite(y) || Number.isFinite(Number(t[i]))) throw new RigError(usage);
     out.push({ bone: t[i], at: [x, y] });
   }
   return out;
@@ -289,6 +299,7 @@ export function describeRig(rig: Rig): string {
         if (n.surface !== 'volume') bits.push(n.surface);
         if (n.spring) bits.push(`spring ${n.spring.stiffness}/${n.spring.damping}${n.spring.limit ? ` ${n.spring.limit.join('..')}°` : ''}`);
         if (n.sortZ !== undefined) bits.push(`sort-z ${n.sortZ}`);
+        if (n.flatMin !== undefined) bits.push(`flat-min ${n.flatMin}`);
         if (n.pin) bits.push(`pin ${n.pin.map((p) => p.bone).join('+')}`);
         lines.push(`${pad}● ${n.name}  (${bits.join(', ')})`);
         walk(n.children, depth + 1);

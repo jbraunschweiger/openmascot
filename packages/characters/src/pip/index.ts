@@ -5,9 +5,11 @@
  * scripts/pip-src.py. Animations come from the shared library (../library)
  * plus Pip-only clips (./clips).
  *
- * Rig notes: Pip is one round blob. `body` owns the full egg silhouette and
- * `head` a slightly smaller sphere inside it, pivoting at its centre, so head
- * tilts and turns roll the face over the ball instead of swinging a neck.
+ * Rig notes: Pip is one round blob. `body` owns the whole egg silhouette; the
+ * `head` has no art of its own (face, beak, crest only) and pivots at the
+ * centre of the ball, so head tilts, turns and nods roll the face over the
+ * sphere instead of swinging a neck. The head sorts in front of the belly via
+ * `data-om-sort-z`, so a nodding beak never slips behind it.
  * Wings hang folded at the sides at rest; the wing slot's `spread` variant is
  * that natural rest wing, `folded` tucks it tight, `fan` fans the flight
  * feathers out (flying).
@@ -142,13 +144,13 @@ export const pip: CharacterDef = {
     clip: 'idle',
     blinkEvery: 3.4,
     fidgetEvery: 6.5,
-    fidgets: ['fidget-look-around', 'fidget-wing-stretch', 'fidget-hop', 'peck', 'fluff', 'chirp'],
+    fidgets: ['fidget-look-around', 'fidget-wing-stretch', 'fidget-hop', 'fidget-ear-twitch', 'peck', 'chirp', 'fluff', 'head-tilt'],
   },
   palette: {
     body: '#4aacf8',
     belly: '#b4dcfc',
     wing: '#1d8de6',
-    back: '#3a9cec',
+    back: '#2f94e6',
     beak: '#fdc93f',
     beakLow: '#fb9a06',
     foot: '#fda707',

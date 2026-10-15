@@ -440,7 +440,7 @@ def wing(side):
 def eye(side):
     s = -1 if side == "l" else 1
     cx = s * -EYE_C[0]
-    attrs = (f'data-om-bone="eye-{side}" data-om-pivot="{f(cx)} {f(EYE_C[1])}" data-om-z="33" '
+    attrs = (f'data-om-bone="eye-{side}" data-om-pivot="{f(cx)} {f(EYE_C[1])}" data-om-z="64" '
              f'data-om-surface="face" data-om-normal="{s * 30} 0"')
     return bone(attrs, slot(f"eye-{side}", eye_variants(side), "open"))
 
@@ -457,17 +457,17 @@ def build():
         path(blob(-66, -91, 13, 7), C["blush"], ' opacity=".5"'),
         path(blob(66, -91, 13, 7), C["blush"], ' opacity=".5"'),
     ]}
-    # Depth: the head pivot sits at the centre of the ball but carries z 31 so the
-    # head group sorts just in front of the belly (z 30); its children's z are
-    # relative, so absolute depths are eyes 64, beak 112, crest -4.
-    head = bone('data-om-bone="head" data-om-pivot="0 -122" data-om-z="31"', (
-        bone('data-om-bone="tuft" data-om-pivot="4 -214" data-om-z="-35" '
+    # Depth: the head pivots at the centre of the ball (z 0), so turns and nods
+    # roll the face over the sphere. It *sorts* just in front of the belly
+    # (sort-z 53 > belly z 52) so a nodding beak never slips behind the belly.
+    head = bone('data-om-bone="head" data-om-pivot="0 -122" data-om-z="0" data-om-sort-z="53"', (
+        bone('data-om-bone="tuft" data-om-pivot="4 -214" data-om-z="-4" '
                'data-om-spring="160 9" data-om-tip="18 -270"',
                [path(CREST, C["body"])])
-        + bone('data-om-bone="cheeks" data-om-pivot="0 -91" data-om-z="32" data-om-surface="face"',
+        + bone('data-om-bone="cheeks" data-om-pivot="0 -91" data-om-z="60" data-om-surface="face"',
                slot("blush", blush, "off"))
         + eye("l") + eye("r")
-        + bone('data-om-bone="nose" data-om-pivot="0 -112" data-om-z="81" data-om-surface="feature"',
+        + bone('data-om-bone="nose" data-om-pivot="0 -112" data-om-z="112" data-om-surface="feature"',
                bone('data-om-bone="mouth" data-om-pivot="0 -104" data-om-z="1"',
                     slot("mouth", mouth_variants(), "default")))
     ))
@@ -482,10 +482,13 @@ def build():
         + wing("l") + wing("r")
         + foot("l") + foot("r")
         + [path(BODY, C["body"])]
-        + bone('data-om-bone="belly" data-om-pivot="0 -51" data-om-z="30" '
+        # Document order follows `z` (head 0, belly 52) as the validator wants;
+        # the engine sorts the head by its sort-z (53) and draws it last. They
+        # don't overlap at rest, so the raw SVG previews identically.
+        + head
+        + bone('data-om-bone="belly" data-om-pivot="0 -51" data-om-z="52" '
                'data-om-surface="face" data-om-normal="0 20"',
                [path(BELLY, C["belly"])])
-        + head
     ))
     svg = (
         ['<svg xmlns="http://www.w3.org/2000/svg" viewBox="-150 -284 300 294" data-om-character="pip">',

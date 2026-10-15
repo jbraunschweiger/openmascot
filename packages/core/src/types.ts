@@ -122,10 +122,24 @@ export interface BoneNode {
    */
   sortZ?: number;
   /**
-   * Skin constraint (`data-om-pin`): one or two points of this bone's art
+   * `flat` surfaces only (`data-om-flat-min`): minimum |foreshortening| (0..1).
+   * Instead of fading out edge-on, the art keeps this fraction of its width
+   * (a wing or ear seen edge-on still reads as a thin shape) and stays opaque.
+   */
+  flatMin?: number;
+  /**
+   * `feature` surfaces only (`data-om-feature-min`): how narrow the feature
+   * may foreshorten in profile (0..1). Default 0.4; higher keeps snouts and
+   * beaks protruding more when the head turns.
+   */
+  featureMin?: number;
+  /**
+   * Skin constraint (`data-om-pin`): one to three points of this bone's art
    * pinned to points carried by other bones. One pin rotates + stretches the
    * bone about its pivot; two pins give the exact affine map of the triangle
-   * (pivot, pin 1, pin 2) — membranes that stay attached to body and limb.
+   * (pivot, pin 1, pin 2); three pins give the affine map of the triangle of
+   * pins (the pivot then only follows) — membranes that stay attached to body
+   * and limb.
    */
   pin?: PinDef[];
   /** Extra attributes copied from the source `<g>` (minus data-om-*). */
@@ -218,6 +232,12 @@ export interface CharacterDef {
   anchors?: Record<string, { bone: string; offset?: [number, number] }>;
   /** Idle behaviour tuning. */
   idle?: IdleConfig;
+  /**
+   * Per-effect default params for this character, merged *under* the params
+   * of every emission (clip events and `emit()`), e.g.
+   * `{ tears: { eyeX: 40, eyeY: -10 } }` so shared clips land on its eyes.
+   */
+  effectParams?: Record<string, Record<string, unknown>>;
   /** Free-form metadata (author, licence, tags). */
   meta?: Record<string, unknown>;
 }

@@ -4,7 +4,7 @@
  * Art: ./echo.svg (rig-annotated, see docs/rig-format.md).
  * Animations come from the shared library (../library) plus Echo-only clips.
  */
-import type { CharacterDef } from '@openmascot/core';
+import type { Channel, CharacterDef, ParamDriver } from '@openmascot/core';
 import svg from './art.generated';
 import { library } from '../library';
 import { echoClips } from './clips';
@@ -27,6 +27,36 @@ export const echoExpressions: CharacterDef['expressions'] = {
   sleepy: { 'eye-l': 'closed', 'eye-r': 'closed', mouth: 'default' },
   proud: { 'eye-l': 'happy', 'eye-r': 'happy', mouth: 'grin' },
 };
+
+/** Fold keys per wing bone: [fold, value] (left wing; the right wing mirrors rot/yaw/x). */
+const FOLD: Record<string, Partial<Record<'rot' | 'yaw' | 'sx' | 'sy' | 'x' | 'y' | 'dz', [number, number][]>>> = {
+  'wing-l': {
+    rot: [[0, 0], [0.5, -10], [1, -2]],
+    yaw: [[0, 0], [0.5, -14], [1, -40]],
+    sx: [[0, 0], [0.5, -0.14], [1, -0.67]],
+    sy: [[0, 0], [0.5, -0.14], [1, -0.67]],
+  },
+  'wing-hand-l': {
+    rot: [[0, 0], [0.5, 2], [1, 2]],
+    sx: [[0, 0], [0.5, 0.02], [1, 0.75]],
+    sy: [[0, 0], [0.5, 0.12], [1, 1.4]],
+  },
+  'wing-tip-l': {
+    rot: [[0, 0], [0.5, -24], [1, -15]],
+  },
+};
+
+function wingFoldDrives(): ParamDriver[] {
+  const out: ParamDriver[] = [];
+  for (const [bone, chans] of Object.entries(FOLD)) {
+    for (const [channel, curve] of Object.entries(chans) as [Channel, [number, number][]][]) {
+      out.push({ bone, channel, curve });
+      const flip = channel === 'rot' || channel === 'yaw' || channel === 'x';
+      out.push({ bone: bone.replace(/-l$/, '-r'), channel, curve: flip ? curve.map(([a, b]) => [a, -b] as [number, number]) : curve });
+    }
+  }
+  return out;
+}
 
 export const echo: CharacterDef = {
   id: 'echo',
@@ -96,6 +126,16 @@ export const echo: CharacterDef = {
         { bone: 'wing-l', channel: 'sx', curve: [[-1, -0.28], [0, 0], [1, -0.08]] },
         { bone: 'wing-r', channel: 'sx', curve: [[-1, -0.28], [0, 0], [1, -0.08]] },
       ],
+    },
+    /**
+     * Wing fold: 0 = fully spread (as drawn), ~0.45 = relaxed (resting, wings
+     * half-tucked against the flanks), 1 = folded tight like a cloak. Driven
+     * entirely by the wing bone chain (arm → hand → tip) — no art swap.
+     */
+    wingFold: {
+      min: 0,
+      max: 1,
+      drives: wingFoldDrives(),
     },
     /** Lean the whole body (-1..1 → ±12°). */
     lean: {

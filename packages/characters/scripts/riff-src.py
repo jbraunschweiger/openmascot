@@ -40,13 +40,16 @@ C = dict(
     tongue_dark="#e0567f",
     blush="#ff8fae",
     sac="#cdee6c",
-    sac_hi="#e2f7a4",
+    sac_rim="#a9d93a",
+    sac_hi="#f0fcc9",
     back="#7fc402",
     spot="#72b800",
     shadow="#1f3a10",
     pad="#3f9e3a",
     pad_hi="#56b84a",
     pad_vein="#368a32",
+    pad_vein_hi="#6cc35e",
+    water="#8fd3f0",
     flower="#ff8fb8",
     flower_in="#ffd1e2",
     flower_c="#ffd84a",
@@ -318,8 +321,8 @@ THIGH_L = smooth([
     (-112, -36), (-98, -44), (-96, -62), (-104, -78),
 ], closed=True)
 SHIN_L = smooth([
-    (-128, -66), (-138, -52), (-134, -36), (-122, -24), (-108, -14),
-    (-95, -14), (-89, -24), (-94, -38), (-106, -56), (-118, -68),
+    (-130, -68), (-141, -52), (-137, -34), (-124, -21), (-108, -11),
+    (-93, -12), (-86, -24), (-91, -40), (-104, -58), (-117, -71),
 ], closed=True)
 SHIN_CREASE_L = P(
     ("M", -103, -54),
@@ -336,10 +339,10 @@ HINDTOE_L = [(-134, -6.5, 5), (-125, -3.8, 4.6)]
 
 # ---- tongue (long frog tongue, drawn pointing screen-right from the mouth)
 TONGUE_ROOT = (0, -121)
-TONGUE_LEN = 169
+TONGUE_LEN = 172
 
 # ---- fly (tongue-catch prop), rest position
-FLY_C = (150, -199)
+FLY_C = (172, -100)
 
 
 # ================================================================ eyes
@@ -546,7 +549,7 @@ def tongue_variants():
     tip = blob(x0 + L - 4, y0, 12, 11)
     groove = stroke(P(("M", x0 + 10, y0), ("L", x0 + L - 22, y0)), C["tongue_dark"], 2.2, ' opacity=".7"')
     out = [path(body, C["tongue"]), groove, path(tip, C["tongue"])]
-    return {"off": [], "out": out, "caught": out + fly_art(x0 + L - 2, y0 - 2, 0.9)}
+    return {"off": [], "out": out, "caught": out + fly_art(x0 + L - 2, y0 - 3, 1.25)}
 
 
 def fly_art(cx, cy, s=1.0):
@@ -606,6 +609,35 @@ def flank(side):
                 [path(m(side_piece(BODY, -54, -100)), C["body"])])
 
 
+def lily_pad():
+    """Floating lily pad (with a notch, veins and a water lily) for `lily-sit`."""
+    def notched(cx, cy, rx, ry, a0=57, a1=67, apex=(40, 5)):
+        """Ellipse with a narrow V notch (from angle a0 to a1) reaching to `apex`."""
+        p0 = (cx + rx * math.cos(math.radians(a0)), cy + ry * math.sin(math.radians(a0)))
+        p1 = (cx + rx * math.cos(math.radians(a1)), cy + ry * math.sin(math.radians(a1)))
+        return (f"M {f(p1[0])} {f(p1[1])} A {f(rx)} {f(ry)} 0 1 1 {f(p0[0])} {f(p0[1])} "
+                f"L {f(apex[0])} {f(apex[1])} Z")
+    veins = [stroke(P(("M", 40, 5), ("L", x, y)), C["pad_vein_hi"], 2.2, ' opacity=".8"')
+             for x, y in [(-120, -4), (-60, -12), (10, -15), (95, -11), (140, 3), (-145, 8), (-70, 16)]]
+    lotus = []
+    fx, fy = -132, 16
+    for ang, ln in [(-60, 15), (-30, 18), (0, 20), (30, 18), (60, 15)]:
+        r = math.radians(ang)
+        tx, ty = fx + math.sin(r) * ln, fy - math.cos(r) * ln
+        nx, ny = math.cos(r) * 6, math.sin(r) * 6
+        lotus.append(path(P(("M", fx, fy), ("C", fx - nx * 1.2, fy - ny * 1.2 - 4, tx - nx, ty - ny, tx, ty),
+                            ("C", tx + nx, ty + ny, fx + nx * 1.2, fy + ny * 1.2 - 4, fx, fy), ("Z",)),
+                          C["flower"] if abs(ang) > 0 else C["flower_in"]))
+    lotus.append(f'<circle cx="{f(fx)}" cy="{f(fy - 6)}" r="3.4" fill="{C["flower_c"]}"/>')
+    return [
+        stroke(P(("M", -150, 22), ("C", -60, 36, 60, 36, 150, 22)), C["water"], 3, ' opacity=".75"'),
+        stroke(P(("M", -182, 14), ("C", -176, 26, -150, 33, -118, 37)), C["water"], 3, ' opacity=".5"'),
+        stroke(P(("M", 182, 14), ("C", 176, 26, 150, 33, 118, 37)), C["water"], 3, ' opacity=".5"'),
+        path(notched(0, 7, 166, 22), C["pad_vein"]),
+        path(notched(0, 3, 164, 19), C["pad"]),
+    ] + veins + [path(blob(-46, -4, 74, 7), C["pad_hi"], ' opacity=".45"')] + lotus
+
+
 def spots(lst, color):
     return [path(blob(x, y, rx, ry), color) for x, y, rx, ry in lst]
 
@@ -633,8 +665,10 @@ def build():
     ))
     throat = wrap('<g data-om-bone="throat" data-om-pivot="0 -110" data-om-z="34" data-om-surface="face">',
                   slot("throat", {"off": [], "on": [
-                      path(blob(0, -90, 41, 29), C["sac"]),
-                      path(blob(-14, -101, 13, 6.5), C["sac_hi"], ' opacity=".9"'),
+                      path(blob(0, -87, 45, 30.5), C["sac_rim"]),
+                      path(blob(0, -89, 43.5, 28), C["sac"]),
+                      path(blob(-17, -102, 15, 6.5), C["sac_hi"], ' opacity=".95"'),
+                      path(blob(19, -79, 5, 3), C["sac_hi"], ' opacity=".7"'),
                   ]}, "off"))
     body = wrap('<g data-om-bone="body" data-om-pivot="0 -60">', (
         hind_leg("l") + hind_leg("r")
@@ -648,21 +682,9 @@ def build():
         + arm("l") + arm("r")
         + throat
     ))
-    pad = {"off": [], "on": [
-        path(blob(0, 3, 158, 21), C["pad_vein"]),
-        path(P(("M", 0, 3), ("L", 40, -17.2), ("C", 90, -16, 150, -8, 158, 2),
-               ("C", 160, 16, 90, 24, 0, 24), ("C", -90, 24, -158, 16, -158, 3),
-               ("C", -158, -10, -90, -18, 0, -18), ("L", 18, -18), ("Z",)), C["pad"]),
-        path(blob(-40, -4, 70, 9), C["pad_hi"], ' opacity=".55"'),
-        # a little water lily on the far side
-        path(blob(142, -6, 9, 13), C["flower"]),
-        path(blob(131, -2, 9, 7), C["flower"]),
-        path(blob(153, -2, 9, 7), C["flower"]),
-        path(blob(142, -4, 5, 8), C["flower_in"]),
-        f'<circle cx="142" cy="-3" r="3" fill="{C["flower_c"]}"/>',
-    ]}
+    pad = {"off": [], "on": lily_pad()}
     fly = wrap(f'<g data-om-bone="fly" data-om-pivot="{f(FLY_C[0])} {f(FLY_C[1])}" data-om-z="80">',
-               slot("fly", {"off": [], "on": fly_art(*FLY_C)}, "off"))
+               slot("fly", {"off": [], "on": fly_art(*FLY_C, 1.45)}, "off"))
     root = wrap('<g data-om-bone="root" data-om-pivot="0 0">', (
         wrap('<g data-om-bone="lilypad" data-om-pivot="0 4" data-om-z="-60" data-om-surface="flat">',
              slot("lilypad", pad, "off"))

@@ -412,7 +412,7 @@ export class Mascot {
     const seed = Math.floor(this.random() * 2 ** 31);
     const specs = def.spawn({
       random: rng(seed),
-      params: ev.params ?? {},
+      params: { ...this.character.effectParams?.[ev.effect], ...ev.params },
       scale: this.opts.effectScale ?? 1,
       angle,
     });

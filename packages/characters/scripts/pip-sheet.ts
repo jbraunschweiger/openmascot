@@ -19,6 +19,7 @@ import { compileRig, describeRig, lintClip, Mascot, renderSvg, type RigWarning }
 import { clipSheet, composeSheet, expressionSheet, sweepSheet } from '../../cli/src/sheet';
 import { library } from '../src/library';
 import { pip } from '../src/pip';
+import { pipClips } from '../src/pip/clips';
 
 const OUT = 'out/pip';
 const argv = process.argv.slice(2);
@@ -66,7 +67,7 @@ switch (cmd) {
       const probs = lintClip(clip, bones, params);
       for (const e of clip.events ?? []) if (!m.effects[e.effect]) probs.push(`unknown effect "${e.effect}"`);
       for (const [, e] of clip.expression ?? []) if (!pip.expressions[e]) probs.push(`unknown expression "${e}"`);
-      const own = library[n] !== m.clips[n];
+      const own = n in pipClips || !(n in library);
       if (probs.length) {
         bad++;
         console.log(`${own ? '✗' : '·'} ${n}${own ? '' : ' (library)'}\n  - ${probs.join('\n  - ')}`);
