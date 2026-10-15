@@ -59,7 +59,7 @@ export function compileRig(svgSource: string, opts: CompileOptions = {}): Rig {
   const slotsByName: Record<string, SlotNode> = {};
   let defs = '';
 
-  const compileChildren = (children: XmlNode[], parentPivot: [number, number], inVariant: string | null): RigNode[] => {
+  const compileChildren = (children: XmlNode[], parentPivot: [number, number], inVariant: string | null, bleed = 0): RigNode[] => {
     const out: RigNode[] = [];
     let artBuf: string[] = [];
     const flush = () => {
@@ -81,23 +81,29 @@ export function compileRig(svgSource: string, opts: CompileOptions = {}): Rig {
       const a = c.attrs;
       if ('data-om-bone' in a || 'data-om-slot' in a || 'data-om-layer' in a) {
         flush();
-        out.push(compileNode(c, parentPivot, inVariant));
+        out.push(compileNode(c, parentPivot, inVariant, bleed));
       } else if (containsAnnotated(c)) {
         // An unannotated group that contains bones: treat as a static layer so
         // nothing gets lost, and warn — the author probably forgot an attribute.
         flush();
         warnings.push({ message: `<${c.name}${a.id ? ` id="${a.id}"` : ''}> contains rig nodes but is not annotated; treated as a layer` });
-        out.push(compileNode({ ...c, attrs: { ...a, 'data-om-layer': '' } }, parentPivot, inVariant));
+        out.push(compileNode({ ...c, attrs: { ...a, 'data-om-layer': '' } }, parentPivot, inVariant, bleed));
       } else {
-        artBuf.push(serializeXml(c));
+        artBuf.push(serializeXml(bleed > 0 ? withBleed(c, bleed) : c));
       }
     }
     flush();
     return out;
   };
 
-  const compileNode = (el: XmlElement, parentPivot: [number, number], inVariant: string | null): RigNode => {
+  const compileNode = (el: XmlElement, parentPivot: [number, number], inVariant: string | null, inheritedBleed = 0): RigNode => {
     const a = el.attrs;
+    // data-om-bleed: same-colour stroke on filled art, inherited by the subtree
+    let bleed = inheritedBleed;
+    if (a['data-om-bleed'] != null) {
+      bleed = nums(a['data-om-bleed'], 1, 'data-om-bleed')![0];
+      if (!(bleed >= 0)) throw new RigError(`Invalid data-om-bleed "${a['data-om-bleed']}" (expected a width >= 0)`);
+    }
     const z = Number(a['data-om-z'] ?? 0);
     if (!Number.isFinite(z)) throw new RigError(`Invalid data-om-z "${a['data-om-z']}"`);
     if (el.name !== 'g') warnings.push({ message: `Rig node <${el.name}> should be a <g>` });
@@ -146,7 +152,7 @@ export function compileRig(svgSource: string, opts: CompileOptions = {}): Rig {
         warnings.push({ bone: name, message: `Bone "${name}" is defined more than once outside of slot variants` });
       }
       list.push(bone);
-      bone.children = compileChildren(el.children, pivot, inVariant);
+      bone.children = compileChildren(el.children, pivot, inVariant, bleed);
       return bone;
     }
 
@@ -179,7 +185,7 @@ export function compileRig(svgSource: string, opts: CompileOptions = {}): Rig {
         slot.variants.push({
           name: vname,
           attrs: stripOm(c.attrs),
-          children: compileChildren(c.children, parentPivot, `${name}:${vname}`),
+          children: compileChildren(c.children, parentPivot, `${name}:${vname}`, bleed),
         });
       }
       if (!slot.variants.length) throw new RigError(`Slot "${name}" has no variants`);
@@ -193,7 +199,7 @@ export function compileRig(svgSource: string, opts: CompileOptions = {}): Rig {
       attrs: stripOm(a),
       children: [],
     };
-    layer.children = compileChildren(el.children, parentPivot, inVariant);
+    layer.children = compileChildren(el.children, parentPivot, inVariant, bleed);
     return layer;
   };
 
@@ -272,6 +278,21 @@ function isDescendant(node: BoneNode | undefined, of: BoneNode): boolean {
   const walk = (ns: RigNode[]): boolean =>
     ns.some((n) => n === node || (n.kind === 'bone' || n.kind === 'layer' ? walk(n.children) : n.kind === 'slot' ? n.variants.some((v) => walk(v.children)) : false));
   return walk(of.children);
+}
+
+const SHAPES = new Set(['path', 'circle', 'ellipse', 'rect', 'polygon']);
+
+/**
+ * `data-om-bleed`: give filled shapes a stroke of their own fill colour, so
+ * abutting pieces (a wing cut into panels, skins pinned edge to edge) overlap
+ * by `width / 2` and anti-aliasing can't open hairline seams between them.
+ * Shapes that already have a stroke, or no solid fill, are left alone.
+ */
+function withBleed(el: XmlElement, width: number): XmlElement {
+  const children = el.children.map((c) => (c.type === 'element' ? withBleed(c, width) : c));
+  const fill = el.attrs.fill;
+  if (!SHAPES.has(el.name) || !fill || fill === 'none' || fill.startsWith('url(') || el.attrs.stroke || el.attrs['fill-opacity']) return { ...el, children };
+  return { ...el, children, attrs: { ...el.attrs, stroke: fill, 'stroke-width': String(width), 'stroke-linejoin': 'round' } };
 }
 
 function containsAnnotated(el: XmlElement): boolean {

@@ -53,6 +53,9 @@ First public version.
   (edge-on flat parts keep a thin opaque sliver instead of fading),
   `data-om-feature-min` (how narrow a `feature` gets in profile),
   `data-om-spring-limit` (per-bone spring angle limits; default ±55°).
+- **`data-om-bleed`**: same-colour strokes on a bone's (and its subtree's)
+  filled art, so abutting pieces overlap and anti-aliasing can't open
+  hairline seams between them.
 - **Params**: `ParamDriver.input` (drive from a weighted sum of params, e.g.
   `{ wingFold: 1, raiseL: -1 }`), `CharacterDef.restParams` (values a clip
   pose starts from for params it doesn't animate — e.g. relaxed wings —
@@ -95,7 +98,10 @@ First public version.
 - Echo: the chest/body no longer pops over the chin when the body pitches
   or yaws (head and belly sort by `data-om-sort-z`), the membrane's lower
   edge stays on the flank in every wing pose and meets the hip with a soft
-  concave scallop (never a straight, pointed sail edge), the spin no longer shows an
+  concave scallop (never a straight, pointed sail edge), the wing stays
+  joined to the body at the armpit when raised or lowered (shoulder-pinned
+  armpit skin + shoulder disc), the cuts between wing panels no longer show
+  as hairline seams (`data-om-bleed`), the spin no longer shows an
   X of membranes from behind or ghostly edge-on wings/ears, and the tuft
   and ears can't swing their base out of the head (limits + tucked roots).
 - Children of foreshortened (`flat`/`face`/`feature`) bones were

@@ -276,3 +276,41 @@ describe('CharacterDef.effectParams', () => {
     expect(p.slots).toEqual({});
   });
 });
+
+describe('data-om-bleed', () => {
+  const art = (rig: Rig, bone: string) =>
+    rig.bonesByName[bone][0].children
+      .filter((c) => c.kind === 'art')
+      .map((c) => (c as { markup: string }).markup)
+      .join('');
+
+  it('adds a same-colour stroke to filled shapes in the bone and its subtree', () => {
+    const { rig, warnings } = compile(
+      svg(`<g data-om-bone="root"><g data-om-bone="wing" data-om-bleed="1.2">
+        <path d="M0 0L10 0L0 10Z" fill="#513f75"/>
+        <path d="M0 0L5 5" fill="none" stroke="#000"/>
+        <circle r="3" fill="#fff" stroke="#000"/>
+        <ellipse rx="2" ry="1" fill="#abc" fill-opacity=".5"/>
+        <g data-om-bone="hand"><rect width="4" height="4" fill="#6a529c"/></g>
+        <g data-om-bone="nail" data-om-bleed="0"><rect width="1" height="1" fill="#fff"/></g>
+      </g></g>`),
+    );
+    expect(warnings).toEqual([]);
+    const w = art(rig, 'wing');
+    expect(w).toContain('fill="#513f75" stroke="#513f75" stroke-width="1.2" stroke-linejoin="round"');
+    // shapes with their own stroke, no fill or translucent fill are untouched
+    expect(w).toContain('<path d="M0 0L5 5" fill="none" stroke="#000"/>');
+    expect(w).toContain('<circle r="3" fill="#fff" stroke="#000"/>');
+    expect(w).not.toContain('fill="#abc" fill-opacity=".5" stroke');
+    // inherited by child bones; 0 switches it off
+    expect(art(rig, 'hand')).toContain('stroke="#6a529c"');
+    expect(art(rig, 'nail')).not.toContain('stroke');
+  });
+
+  it('follows recolouring and rejects bad widths', () => {
+    const src = svg('<g data-om-bone="root" data-om-bleed="1"><path d="M0 0H1V1Z" fill="#513f75"/></g>');
+    const rig = compileRig(src, { recolor: { '#513f75': '#ff0000' } });
+    expect(art(rig, 'root')).toContain('stroke="#ff0000"');
+    expect(() => compile(svg('<g data-om-bone="root" data-om-bleed="-1"/>'))).toThrow(RigError);
+  });
+});

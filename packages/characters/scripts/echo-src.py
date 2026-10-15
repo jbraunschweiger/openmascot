@@ -562,6 +562,7 @@ WM = (-166, -77.5)       # trailing-edge point where the fan splits (finger 4)
 WB = (-48, -36)          # membrane meets the flank at hip height (pinned to the body)
 WE = (-98, -112)         # elbow on the arm: seam between web and flank skins, apex of the flank
 CAP_R = 8.6              # rim joint cap at the wrist
+SHOULDER_R = 20          # shoulder disc around the wing pivot (hidden at rest)
 
 
 def sample(d, n=14):
@@ -647,26 +648,26 @@ def wing_pieces():
     tip = [(WW, far(WM), True), (up, WW, True)]                 # W->M ... up: leading finger
     hand = [(WW, far(WP2), True), (WW, far(WM), False)]          # finger 5 .. finger 4
     arm = [(up, WW, False), (WW, far(WP2), False)]               # up ... finger 5 (arm side)
-    # arm-side membrane splits along S->P2 into the web (above) and flank (below);
-    # both tuck under the rim (cut along S->W) and the flank under the body (S->B)
-    # keep the membrane side of S->B (the inner scallop); the part beyond it
-    # is inside the body anyway
-    flank = arm + [(WS, WP2, False), (toward(WS, WB, -0.2), toward(WB, WS, -2), True)]
-    # Arm-side membrane splits along E->P2 (elbow to finger tip) into the web
-    # (E, W, P2: between forearm and finger 5) and the flank (everything below:
-    # down to the inner scallop and into the body). Both are exact affine
-    # skins sharing the pinned edge E->P2, so the seam never opens. The flank
-    # is pinned to the elbow, the hip anchor and the finger tip: its apex (the
-    # elbow) travels with the wing, so the inner trailing edge stays a soft
-    # concave scallop when the wing rises, flaps or folds — never a straight
-    # sail edge running to a point.
-    # (the flank's top runs mid-way through the rim band, so it tucks under
-    # the arm without poking above it)
+    # The arm-side membrane is three exact affine skins that share pinned edges,
+    # so no seam can open in any pose:
+    #  - web   (E, W, P2): between forearm and finger 5;
+    #  - flank (E, B, P2): below elbow->finger tip, down to the inner scallop
+    #    into the hip. Its apex (the elbow) travels with the wing, so the
+    #    scallop stays a soft concave curve whether the wing rises, flaps or
+    #    folds — never a straight sail edge;
+    #  - pit   (S, E, B): the armpit between shoulder, elbow and hip. Pinned to
+    #    the shoulder itself, so the membrane stays joined to the body side
+    #    when the wing drops (a flank pinned only at E, B, P2 would swing its
+    #    shoulder corner off the body and open a gap there).
+    # The pit's top runs mid-way through the rim band (tucked under the arm)
+    # and the S->B side stays inside the body.
+    body_side = (toward(WS, WB, -0.2), toward(WB, WS, -2), True)
     web = arm + [(WS, WW, False), (WE, WP2, True)]
-    flank = arm + [(WE, WP2, False), ((WS[0], WS[1] - 8), (WE[0], WE[1] - 8), False), (toward(WS, WB, -0.2), toward(WB, WS, -2), True)]
+    flank = arm + [(WE, WP2, False), (WE, WB, True), body_side]
+    pit = arm + [(WE, WB, False), ((WS[0], WS[1] - 8), (WE[0], WE[1] - 8), False), body_side]
     pieces = {}
     for name, cuts, which in (("tip", tip, None), ("hand", hand, None), ("web", web, "mem"),
-                              ("flank", flank, "mem"), ("arm", arm, "rim")):
+                              ("flank", flank, "mem"), ("pit", pit, "mem"), ("arm", arm, "rim")):
         out = []
         for i, (poly, col) in enumerate(polys):
             if which == "mem" and i == 4:
@@ -695,9 +696,23 @@ def wing(side):
     cap = path(m(blob(WW[0], WW[1], CAP_R, CAP_R)), C["rim"])
     art = lambda k: ["  " + path(m(d), col) for d, col in pcs[k]]
     lines = [
+        # bleed: same-colour strokes overlap the abutting panels, so no
+        # anti-aliasing hairlines show along the cuts
         f'<g data-om-bone="wing-{side}" data-om-pivot="{X(WS)}" data-om-z="-20" data-om-surface="flat" data-om-flat-min="0.1" '
+        f'data-om-bleed="1" '
         f'data-om-spring="90 9" data-om-tip="{s * 196} -72">',
         # pinned skins sort far behind the rest of the wing (they are the membrane)
+        # shoulder disc centred on the pivot, behind everything else of the wing
+        # (and behind head and body): rotation-invariant, it fills the concave
+        # corner between jaw, body side and arm, so the raised or lowered wing
+        # always reads as joined to the body (no armpit gap). Front-facing only.
+        f'  <g data-om-bone="wing-shoulder-{side}" data-om-pivot="{X(WS)}" data-om-surface="face" data-om-sort-z="-500">',
+        "    " + path(m(blob(WS[0], WS[1], SHOULDER_R, SHOULDER_R)), C["rim"]),
+        "  </g>",
+        f'  <g data-om-bone="wing-pit-{side}" data-om-pivot="{X(WS)}" data-om-sort-z="-402" '
+        f'data-om-pin="wing-{side} {X(WS)} wing-{side} {X(WE)} wing-root-{side} {X(WB)}">',
+    ] + ["  " + l for l in art("pit")] + [
+        "  </g>",
         f'  <g data-om-bone="wing-flank-{side}" data-om-pivot="{X(WS)}" data-om-sort-z="-401" '
         f'data-om-pin="wing-{side} {X(WE)} wing-root-{side} {X(WB)} wing-hand-{side} {X(WP2)}">',
     ] + ["  " + l for l in art("flank")] + [
