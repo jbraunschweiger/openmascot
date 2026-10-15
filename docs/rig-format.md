@@ -50,6 +50,7 @@ transform. Bones nest; a bone's transform applies to everything inside it.
 | `data-om-spring="stiffness damping"` | Secondary motion: the bone's rotation lags/overshoots when its parent accelerates (ears, hair tufts, wings, antennae). | none |
 | `data-om-tip="x y"` | Centre of mass used by the spring (usually the far tip of the ear/wing). | pivot + (0, −30) |
 | `data-om-spring-limit="min max"` | Limits (degrees, + = clockwise, in the bone's own unmirrored sense) for the spring's extra rotation. When the spring reaches a limit it rests against it instead of winding past. Use it so a tuft/ear never swings its base out of the head. | `-55 55` |
+| `data-om-bleed="w"` | Gives every solidly filled shape in this bone **and its subtree** a stroke of its own fill colour, `w` units wide (round joins), so pieces that abut along cut lines overlap by `w/2` and anti-aliasing can't open hairline seams between them in any renderer. Shapes that already have a stroke, `fill="none"`, gradient fills or `fill-opacity` are left alone; a child bone can switch it off with `0`. The outline grows by `w/2` (use ~1 unit). | none |
 | `data-om-shadow` | Marks the ground shadow bone (must be **outside** `root`). The runtime scales/fades it with the root's height. | — |
 | `data-om-sort-z="n"` | Depth used **only for sorting** among siblings, in place of `z` (rotated like `z`, with the same pivot lever). Parallax and perspective still use `z`. Use it when the pivot's depth isn't the depth of the surface that overlaps the neighbours — e.g. Echo's head (`z 4`, `sort-z 60`: the chin overhangs the chest) and belly (`z 40`, `sort-z 10`). Document order is validated against it. | `z` |
 | `data-om-flat-min="f"` | `flat` only: minimum \|foreshortening\| (0..1). Edge-on, the art keeps this fraction of its width and stays opaque, instead of fading out — a wing or ear seen edge-on still reads as a thin shape. | none (fade) |
@@ -124,7 +125,8 @@ they make sense (`-l` / `-r` = **screen** left / right):
 | `wing-l`, `wing-r` *(or `arm-l`, `arm-r`)* | forelimbs; for a jointed wing this is the **arm** (shoulder pivot), the root of the wing chain |
 | `wing-hand-l`, `wing-hand-r` | wing child at the wrist: inner fingers / membrane wedge |
 | `wing-tip-l`, `wing-tip-r` | child of the hand at the wrist: leading finger + outer membrane (closes over the hand like a fan) |
-| `wing-web-l`, `wing-web-r` / `wing-flank-l`, `wing-flank-r` | pinned skins (membrane between arm and fingers / between fingers and flank) |
+| `wing-web-l`, `wing-web-r` / `wing-flank-l`, `wing-flank-r` / `wing-pit-l`, `wing-pit-r` | pinned skins (membrane between forearm and finger / below it down to the hip scallop / the armpit between shoulder, elbow and hip) |
+| `wing-shoulder-l`, `wing-shoulder-r` | shoulder disc around the wing pivot, behind the rest of the wing: fills the corner between jaw, body and arm |
 | `wing-root-l`, `wing-root-r` | art-less anchor on the flank (at the wing's depth) that the flank skin is pinned to |
 | `foot-l`, `foot-r` | feet |
 | `shadow` | ground shadow (outside `root`) |
@@ -146,6 +148,8 @@ folds **by bone motion**, driven by the portable `wingFold` param (0 spread,
 body
  ├─ wing-root-l      anchor on the flank at the wing's depth (no art)
  └─ wing-l           arm: shoulder → wrist, the light leading-edge rim (flat, spring)
+     ├─ wing-shoulder-l disc around the shoulder pivot, sorted behind everything (face)
+     ├─ wing-pit-l     armpit skin: pinned to wing-l (shoulder, elbow) + wing-root-l (hip)
      ├─ wing-flank-l   skin below elbow→finger tip, down to the inner scallop: pinned to
      │                 wing-l (elbow) + wing-root-l (hip) + wing-hand-l (finger tip)
      ├─ wing-web-l     skin between forearm and finger 5: pinned to wing-l (elbow, wrist)
@@ -165,7 +169,16 @@ is the **elbow**, not a body point: its apex travels with the wing, so the
 inner trailing edge (finger tip → hip) keeps the soft concave scallop of the
 drawing whether the wing rises, flaps or folds — a body-fixed apex lets the
 affine map flatten it into a straight, pointed "sail" edge. Cut skins so the
-edge you care about sits far from the line between two of the pins. The generator
+edge you care about sits far from the line between two of the pins.
+
+The three skins (pit, flank, web) share pinned edges (elbow→hip,
+elbow→finger tip), so they tile the membrane without gaps in every pose; the
+armpit skin is pinned to the shoulder itself, so the membrane never swings
+off the body side when the wing drops. A shoulder disc centred on the wing
+pivot (rotation-invariant, hidden behind head and body at rest) fills the
+concave corner between jaw, body and arm when the wing is raised or lowered.
+The wing root carries `data-om-bleed="1"`, so the panel cuts never show as
+hairlines. The generator
 (`packages/characters/scripts/echo-src.py`) shows the cutting; the drivers
 are in `packages/characters/src/echo/index.ts`.
 
