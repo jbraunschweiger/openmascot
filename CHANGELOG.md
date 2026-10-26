@@ -71,7 +71,7 @@ First public version.
 - **CLI**: `validate`, `list`, `lint`, `render`, `framesheet` (clips,
   transitions, expressions, sweeps, params, per-beat sampling) and an effects
   review sheet.
-- **Playground** (Vite + React): studio, gallery and an app showcase.
+- **Playground** (Vite + React): studio, gallery and small integration examples (listening, answer feedback, celebration). The full Echo app showcase moved into the Echo app, which consumes OpenMascot as a dependency.
 - **Tests**: unit tests for every core module, Echo and every library clip,
   the DOM renderer, the player/custom element and the React component.
 - **Docs**: architecture, rig format, character authoring guide, animation,

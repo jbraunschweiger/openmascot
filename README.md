@@ -9,7 +9,7 @@ no proprietary editor and no video files.
 **[▶ Live demo](https://jbraunschweiger.github.io/openmascot/)** —
 [Studio](https://jbraunschweiger.github.io/openmascot/#/studio) ·
 [Gallery](https://jbraunschweiger.github.io/openmascot/#/gallery) ·
-[App showcase](https://jbraunschweiger.github.io/openmascot/#/app)
+[Examples](https://jbraunschweiger.github.io/openmascot/#/examples)
 
 <p align="center">
   <img src="docs/images/hero.png" width="300" alt="Echo the bat waving">
@@ -196,7 +196,7 @@ Read [docs/architecture.md](docs/architecture.md) for the full pipeline and
 | [`@openmascot/react`](packages/react) | `<Mascot>` component and `useMascotRef()` imperative handle. | 0.9 kB (+ web, core) |
 | [`@openmascot/characters`](packages/characters) | Characters and the shared clip library (idle, fidgets, emotions, gestures, dances). One subpath per character: `/echo`, `/pip`, `/riff`, plus `/library`. | 12.3 kB library + ~8–11 kB art per character |
 | [`@openmascot/cli`](packages/cli) | `openmascot validate / list / lint / render / framesheet` (`npx @openmascot/cli`). | — |
-| [`apps/playground`](apps/playground) | Vite + React playground: studio, gallery and an app showcase (not published). | — |
+| [`apps/playground`](apps/playground) | Vite + React playground: studio, gallery and small integration examples (not published). | — |
 
 Sizes are upper bounds for importing everything an entry exports (minified,
 gzip -9; `@openmascot/characters/echo` including the library is 20.8 kB). An
