@@ -576,7 +576,7 @@ export function Home() {
           <footer className="hm-footer">
             <span>OpenMascot — MIT licensed. {CAST.map((x) => x.name).join(', ')} © the OpenMascot authors.</span>
             <span>
-              <a href="#/studio">Studio</a> · <a href="#/gallery">Gallery</a> · <a href="#/app">App showcase</a>
+              <a href="#/studio">Studio</a> · <a href="#/gallery">Gallery</a> · <a href="#/examples">Examples</a>
             </span>
           </footer>
         </div>

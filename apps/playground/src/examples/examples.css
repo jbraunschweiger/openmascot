@@ -1,0 +1,25 @@
+/* Integration examples (#/examples). Everything is prefixed `ex-`. */
+.ex-page { max-width: 1180px; margin: 0 auto; padding: 28px 20px 56px; }
+.ex-head h1 { margin: 0 0 8px; font-size: 34px; font-weight: 900; letter-spacing: -0.5px; }
+.ex-head p { margin: 0 0 16px; max-width: 70ch; color: var(--om-muted); line-height: 1.5; }
+.ex-head code, .ex-foot code { font-size: 0.92em; }
+.ex-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 18px; margin-top: 22px; }
+.ex-card {
+  display: flex; flex-direction: column; overflow: hidden;
+  background: var(--om-card); border: 1px solid var(--om-line); border-radius: var(--om-radius);
+}
+.ex-stage { position: relative; aspect-ratio: 4 / 3; overflow: hidden; background: radial-gradient(circle at 50% 70%, #efeafd 0%, #fbfaff 70%); }
+.ex-body { padding: 16px 18px 18px; display: flex; flex-direction: column; gap: 10px; flex: 1; }
+.ex-body h2 { margin: 0; font-size: 19px; font-weight: 900; }
+.ex-body p { margin: 0; color: var(--om-muted); line-height: 1.45; font-size: 14px; }
+.ex-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.ex-code {
+  margin: auto 0 0; padding: 10px 12px; overflow-x: auto;
+  background: #f6f4fb; border-radius: 10px; font-size: 12px; line-height: 1.5; color: var(--om-ink);
+}
+.ex-foot { margin: 28px 0 0; color: var(--om-muted); line-height: 1.5; max-width: 80ch; }
+@media (max-width: 520px) {
+  .ex-page { padding: 20px 16px 40px; }
+  .ex-head h1 { font-size: 28px; }
+}
+.ex-stage > * { position: absolute; inset: 0; }

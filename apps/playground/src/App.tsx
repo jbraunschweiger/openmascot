@@ -3,19 +3,20 @@
  *  #/          Home (landing)           – studio/
  *  #/studio    Animation studio         – studio/
  *  #/gallery   Emotions & poses gallery – studio/
- *  #/app       Echo app UI showcase     – showcase/
+ *  #/examples  Integration examples     – examples/
+ *  #/app       old app showcase URL, redirects to #/examples
  */
 import { useEffect, useState, type ReactElement } from "react";
 import { Home } from './studio/Home';
 import { Studio } from './studio/Studio';
 import { Gallery } from './studio/Gallery';
-import { Showcase } from './showcase/Showcase';
+import { Examples } from './examples/Examples';
 
 const routes: Record<string, { label: string; el: () => ReactElement }> = {
   '/': { label: 'Home', el: Home },
   '/studio': { label: 'Studio', el: Studio },
   '/gallery': { label: 'Gallery', el: Gallery },
-  '/app': { label: 'App showcase', el: Showcase },
+  '/examples': { label: 'Examples', el: Examples },
 };
 
 function useHashRoute() {
@@ -31,6 +32,10 @@ function useHashRoute() {
 
 export function App() {
   const route = useHashRoute();
+  // The Echo app showcase moved into the Echo app itself; keep old links working.
+  useEffect(() => {
+    if (route === '/app') location.replace('#/examples');
+  }, [route]);
   const Page = (routes[route] ?? routes['/']).el;
   return (
     <>
